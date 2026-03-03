@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema Diedrico — Descriptive Geometry</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Playfair+Display:ital,wght@0,700;1,400&display=swap');
+
+  :root {
+    --bg: #0d0f14;
+    --surface: #141720;
+    --border: #252a38;
+    --accent-h: #4fc3f7;
+    --accent-v: #f06292;
+    --accent-line: #ffd54f;
+    --accent-point: #a5d6a7;
+    --accent-plane: #ce93d8;
+    --text: #cdd4e8;
+    --muted: #5a6380;
+    --panel: #10131a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    padding: 12px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    background: var(--panel);
+  }
+
+  .title-block h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-style: italic;
+    color: #e8eaf6;
+    letter-spacing: 0.02em;
+  }
+  .title-block p {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  .legend {
+    display: flex;
+    gap: 20px;
+    font-size: 11px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+  }
+
+  .workspace {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    grid-template-rows: 1fr 320px;
+    flex: 1;
+    gap: 0;
+    overflow: hidden;
+  }
+
+  #canvas3d {
+    grid-row: 1 / 3;
+    grid-column: 1 / 2;
+    display: block;
+    cursor: grab;
+  }
+  #canvas3d:active { cursor: grabbing; }
+
+  .views-panel {
+    grid-row: 1 / 2;
+    grid-column: 2 / 3;
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .controls-panel {
+    grid-row: 2 / 3;
+    grid-column: 2 / 3;
+    border-left: 1px solid var(--border);
+    border-top: 1px solid var(--border);
+    padding: 16px;
+    overflow-y: auto;
+    background: var(--panel);
+  }
+
+  .panel-header {
+    padding: 10px 16px;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+    flex-shrink: 0;
+  }
+
+  .view-canvases {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    flex: 1;
+    gap: 0;
+    min-height: 0;
+  }
+
+  .view-box {
+    position: relative;
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+  }
+  .view-box:last-child { border-right: none; }
+
+  .view-label {
+    position: absolute;
+    top: 6px; left: 8px;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    z-index: 2;
+  }
+
+  canvas.view { width: 100% !important; height: 100% !important; display: block; }
+
+  .controls-panel h3 {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  .ctrl-group {
+    margin-bottom: 14px;
+  }
+
+  .ctrl-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+
+  .ctrl-label {
+    font-size: 11px;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .color-badge {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 2px;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100px;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--accent-line);
+    cursor: pointer;
+  }
+
+  .val-display {
+    font-size: 10px;
+    color: var(--muted);
+    width: 28px;
+    text-align: right;
+  }
+
+  .toggle-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+
+  .toggle-btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    padding: 4px 10px;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    letter-spacing: 0.08em;
+    transition: all 0.15s;
+  }
+  .toggle-btn.active {
+    color: var(--bg);
+    border-color: transparent;
+  }
+  .toggle-btn.h.active  { background: var(--accent-h); }
+  .toggle-btn.v.active  { background: var(--accent-v); }
+  .toggle-btn.ln.active  { background: var(--accent-line); }
+  .toggle-btn.pt.active  { background: var(--accent-point); }
+  .toggle-btn.pl.active  { background: var(--accent-plane); }
+
+  .info-box {
+    margin-top: 8px;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 10px;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+
+  .info-box span { color: var(--text); }
+
+  .separator { height: 1px; background: var(--border); margin: 10px 0; }
+
+  /* ── Cases / Tabs ─────────────────────────────────────────────── */
+  .cases-bar {
+    display: flex;
+    flex-direction: column;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+    flex-shrink: 0;
+  }
+  .cases-label {
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 7px 14px 4px;
+  }
+  .cases-tabs {
+    display: flex;
+    overflow-x: auto;
+    gap: 0;
+  }
+  .case-tab {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    padding: 6px 11px;
+    border: none;
+    border-right: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    white-space: nowrap;
+    letter-spacing: 0.06em;
+    transition: all 0.15s;
+    border-bottom: 2px solid transparent;
+  }
+  .case-tab:hover { color: var(--text); background: var(--surface); }
+  .case-tab.active {
+    color: #e8eaf6;
+    background: var(--surface);
+    border-bottom: 2px solid var(--accent-plane);
+  }
+  .case-desc {
+    font-size: 10px;
+    color: var(--muted);
+    line-height: 1.6;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin-bottom: 10px;
+  }
+  .case-desc strong { color: var(--text); }
+
+
+  /* Bottom info bar */
+  .bottom-bar {
+    position: absolute;
+    bottom: 0; left: 0;
+    width: calc(100% - 280px);
+    padding: 6px 16px;
+    background: rgba(10,12,18,0.85);
+    border-top: 1px solid var(--border);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    display: flex;
+    gap: 24px;
+  }
+
+  .hint { display: flex; align-items: center; gap: 6px; }
+  .kbd {
+    display: inline-block;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 9px;
+    color: var(--text);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title-block">
+    <h1>Sistema Diedrico</h1>
+    <p>Descriptive Geometry — Double Projection System</p>
+  </div>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent-h)"></div> H plane</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent-v)"></div> V plane</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent-line)"></div> Line</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent-point)"></div> Point</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent-plane)"></div> Plane</div>
+  </div>
+</header>
+
+<div class="workspace">
+  <canvas id="canvas3d"></canvas>
+
+  <div class="views-panel">
+    <div class="panel-header">Projected Views</div>
+    <div class="view-canvases">
+      <div class="view-box">
+        <div class="view-label" style="color:var(--accent-h)">Plan (H)</div>
+        <canvas id="viewH" class="view"></canvas>
+      </div>
+      <div class="view-box">
+        <div class="view-label" style="color:var(--accent-v)">Elevation (V)</div>
+        <canvas id="viewV" class="view"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls-panel" style="padding:0; display:flex; flex-direction:column;">
+    <!-- Cases tabs -->
+    <div class="cases-bar">
+      <div class="cases-label">Study Cases</div>
+      <div class="cases-tabs">
+        <button class="case-tab active" data-case="0">① Plane ∥ LT</button>
+        <button class="case-tab" data-case="1">② Point</button>
+        <button class="case-tab" data-case="2">③ Line</button>
+        <button class="case-tab" data-case="3">④ 3-pt Plane</button>
+      </div>
+    </div>
+    <!-- Dynamic controls area -->
+    <div id="case-controls" style="padding:14px; overflow-y:auto; flex:1;">
+    </div>
+  </div>
+</div>
+
+<div class="bottom-bar">
+  <div class="hint"><span class="kbd">drag</span> Orbit</div>
+  <div class="hint"><span class="kbd">scroll</span> Zoom</div>
+  <div class="hint"><span class="kbd">right drag</span> Pan</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ── State ────────────────────────────────────────────────────────────────────
+const state = {
+  px: 1.5, py: 2.0, pz: 1.5,
+  px2: -1.0, py2: 0.8, pz2: 2.5,
+  la: 35, pa: 45,
+  showH: true, showV: true,
+  showPoint: false, showLine: false, showPlane: true
+};
+
+// Colors
+const C = {
+  H: 0x4fc3f7, V: 0xf06292,
+  line: 0xffd54f, point: 0xa5d6a7, plane: 0xce93d8,
+  projH: 0x4fc3f7, projV: 0xf06292,
+  groundLine: 0x888888, axis: 0x444466
+};
+
+// ── THREE.JS Scene ────────────────────────────────────────────────────────────
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas3d'), antialias: true, alpha: false });
+renderer.setClearColor(0x0d0f14);
+renderer.setPixelRatio(window.devicePixelRatio);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+camera.position.set(6, 5, 7);
+camera.lookAt(0, 1.5, 0);
+
+// Orbit controls (manual)
+let orbit = { theta: 0.7, phi: 0.9, radius: 11, target: new THREE.Vector3(0, 1.5, 0) };
+let mouse = { down: false, right: false, x: 0, y: 0 };
+
+const canvas3d = document.getElementById('canvas3d');
+canvas3d.addEventListener('mousedown', e => {
+  mouse.down = true; mouse.right = e.button === 2;
+  mouse.x = e.clientX; mouse.y = e.clientY;
+});
+canvas3d.addEventListener('contextmenu', e => e.preventDefault());
+window.addEventListener('mouseup', () => { mouse.down = false; });
+window.addEventListener('mousemove', e => {
+  if (!mouse.down) return;
+  const dx = e.clientX - mouse.x, dy = e.clientY - mouse.y;
+  mouse.x = e.clientX; mouse.y = e.clientY;
+  if (mouse.right) {
+    const right = new THREE.Vector3().crossVectors(
+      new THREE.Vector3(Math.sin(orbit.theta)*Math.sin(orbit.phi), Math.cos(orbit.phi), Math.cos(orbit.theta)*Math.sin(orbit.phi)),
+      new THREE.Vector3(0,1,0)).normalize();
+    orbit.target.addScaledVector(right, -dx * 0.012);
+    orbit.target.y += dy * 0.012;
+  } else {
+    orbit.theta -= dx * 0.008;
+    orbit.phi = Math.max(0.1, Math.min(Math.PI - 0.1, orbit.phi + dy * 0.008));
+  }
+  updateCamera();
+});
+canvas3d.addEventListener('wheel', e => {
+  orbit.radius = Math.max(3, Math.min(25, orbit.radius + e.deltaY * 0.02));
+  updateCamera();
+}, { passive: true });
+
+function updateCamera() {
+  camera.position.set(
+    orbit.target.x + orbit.radius * Math.sin(orbit.theta) * Math.sin(orbit.phi),
+    orbit.target.y + orbit.radius * Math.cos(orbit.phi),
+    orbit.target.z + orbit.radius * Math.cos(orbit.theta) * Math.sin(orbit.phi)
+  );
+  camera.lookAt(orbit.target);
+}
+updateCamera();
+
+// Lights
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+dirLight.position.set(5, 8, 5);
+scene.add(dirLight);
+
+// ── Scene objects (rebuilt on state change) ──────────────────────────────────
+let sceneGroup = new THREE.Group();
+scene.add(sceneGroup);
+
+function buildScene() {
+  sceneGroup.clear();
+  state._planeAlpha = undefined;
+  state._planeD = undefined;
+  state._3ptN = undefined;
+  state._3ptDc = undefined;
+  state._3ptP1 = state._3ptP2 = state._3ptP3 = undefined;
+
+  const SIZE = 4;
+
+  // ── H plane (XZ, y=0) ──────────────────────────────────────────────────────
+  if (state.showH) {
+    const hGeo = new THREE.PlaneGeometry(SIZE*2, SIZE*2);
+    const hMat = new THREE.MeshBasicMaterial({ color: C.H, opacity: 0.08, transparent: true, side: THREE.DoubleSide });
+    const hMesh = new THREE.Mesh(hGeo, hMat);
+    hMesh.rotation.x = -Math.PI / 2;
+    sceneGroup.add(hMesh);
+
+    // H grid
+    const hGridMat = new THREE.LineBasicMaterial({ color: C.H, opacity: 0.18, transparent: true });
+    for (let i = -SIZE; i <= SIZE; i++) {
+      const pts = [new THREE.Vector3(i, 0, -SIZE), new THREE.Vector3(i, 0, SIZE)];
+      sceneGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), hGridMat));
+      const pts2 = [new THREE.Vector3(-SIZE, 0, i), new THREE.Vector3(SIZE, 0, i)];
+      sceneGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts2), hGridMat));
+    }
+    // H border
+    const hBorderMat = new THREE.LineBasicMaterial({ color: C.H, opacity: 0.6, transparent: true });
+    const hBorderPts = [
+      new THREE.Vector3(-SIZE,0,-SIZE), new THREE.Vector3(SIZE,0,-SIZE),
+      new THREE.Vector3(SIZE,0,SIZE), new THREE.Vector3(-SIZE,0,SIZE),
+      new THREE.Vector3(-SIZE,0,-SIZE)
+    ];
+    sceneGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(hBorderPts), hBorderMat));
+    // Label
+    addLabel('PH', new THREE.Vector3(SIZE+0.3, 0, 0), C.H);
+  }
+
+  // ── V plane (XY, z=0) ──────────────────────────────────────────────────────
+  if (state.showV) {
+    const vGeo = new THREE.PlaneGeometry(SIZE*2, SIZE*2);
+    const vMat = new THREE.MeshBasicMaterial({ color: C.V, opacity: 0.08, transparent: true, side: THREE.DoubleSide });
+    const vMesh = new THREE.Mesh(vGeo, vMat);
+    vMesh.position.z = 0;
+    sceneGroup.add(vMesh);
+
+    const vGridMat = new THREE.LineBasicMaterial({ color: C.V, opacity: 0.18, transparent: true });
+    for (let i = -SIZE; i <= SIZE; i++) {
+      const pts = [new THREE.Vector3(i, -SIZE, 0), new THREE.Vector3(i, SIZE, 0)];
+      sceneGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), vGridMat));
+      const pts2 = [new THREE.Vector3(-SIZE, i, 0), new THREE.Vector3(SIZE, i, 0)];
+      sceneGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts2), vGridMat));
+    }
+    const vBorderMat = new THREE.LineBasicMaterial({ color: C.V, opacity: 0.6, transparent: true });
+    const vBorderPts = [
+      new THREE.Vector3(-SIZE,-SIZE,0), new THREE.Vector3(SIZE,-SIZE,0),
+      new THREE.Vector3(SIZE,SIZE,0), new THREE.Vector3(-SIZE,SIZE,0),
+      new THREE.Vector3(-SIZE,-SIZE,0)
+    ];
+    sceneGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(vBorderPts), vBorderMat));
+    addLabel('PV', new THREE.Vector3(SIZE+0.3, SIZE-0.3, 0), C.V);
+  }
+
+  // Ground line (x axis at intersection)
+  const glMat = new THREE.LineBasicMaterial({ color: 0xaaaaaa, opacity: 0.7, transparent: true });
+  sceneGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-SIZE, 0, 0), new THREE.Vector3(SIZE, 0, 0)
+  ]), glMat));
+  addLabel('LT', new THREE.Vector3(SIZE+0.3, 0.1, 0), 0xaaaaaa);
+
+  // Axes
+  const axisMat = new THREE.LineBasicMaterial({ color: 0x555577, opacity: 0.5, transparent: true });
+  const axes = [
+    [new THREE.Vector3(-SIZE,0,0), new THREE.Vector3(SIZE,0,0)],
+    [new THREE.Vector3(0,0,0), new THREE.Vector3(0,SIZE,0)],
+    [new THREE.Vector3(0,0,-SIZE), new THREE.Vector3(0,0,SIZE)],
+  ];
+  axes.forEach(([a,b]) => sceneGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([a,b]), axisMat)));
+
+  // ── User-defined oblique PLANE ──────────────────────────────────────────────
+  // The plane is defined as tilted by angle α around the X-axis.
+  // We fix a pivot point P0 = (0, py0, pz0) that lies on the plane.
+  // Plane normal: n = (0, sin(α), -cos(α))
+  // Plane equation: n·(r - P0) = 0  →  sin(α)·(y - py0) - cos(α)·(z - pz0) = 0
+  //                               →  sin(α)·y - cos(α)·z = sin(α)·py0 - cos(α)·pz0 = D
+  //
+  // Horizontal trace (h.t.): intersection with PH (y=0)
+  //   -cos(α)·z = D  →  z_ht = -D / cos(α)          (line parallel to X at z=z_ht on y=0)
+  //
+  // Vertical trace (v.t.): intersection with PV (z=0)
+  //   sin(α)·y = D  →  y_vt = D / sin(α)             (line parallel to X at y=y_vt on z=0)
+  //
+  // When α=0 the plane is horizontal (parallel to H), traces degenerate.
+  if (state.showPlane && currentCase !== 3) {
+    const alpha = THREE.MathUtils.degToRad(state.pa); // tilt angle
+    // Pivot: a nice fixed point the plane passes through
+    const py0 = 1.8, pz0 = 1.2;
+    const D = Math.cos(alpha) * py0 - Math.sin(alpha) * pz0;
+
+    // 3D plane mesh — rotate a flat XY quad by alpha around X axis, offset to pivot
+    const planeGeo = new THREE.PlaneGeometry(SIZE * 1.8, SIZE * 1.8);
+    const planeMat = new THREE.MeshBasicMaterial({ color: C.plane, opacity: 0.18, transparent: true, side: THREE.DoubleSide });
+    const planeMesh = new THREE.Mesh(planeGeo, planeMat);
+    // A plane with normal (0, sin(α), -cos(α)) → rotate around X by (π/2 - α)
+    planeMesh.rotation.x = Math.PI / 2 - alpha;
+    // Position pivot point
+    planeMesh.position.set(0, py0, pz0);
+    sceneGroup.add(planeMesh);
+
+    // Plane border (same transform as mesh)
+    const borderMat = new THREE.LineBasicMaterial({ color: C.plane, opacity: 0.85, transparent: true });
+    const hw = SIZE * 0.9;
+    const localCorners = [
+      new THREE.Vector3(-hw, -hw, 0), new THREE.Vector3(hw, -hw, 0),
+      new THREE.Vector3(hw,  hw, 0), new THREE.Vector3(-hw,  hw, 0),
+      new THREE.Vector3(-hw, -hw, 0)
+    ];
+    const rotQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2 - alpha, 0, 0));
+    const worldCorners = localCorners.map(v =>
+      v.clone().applyQuaternion(rotQ).add(new THREE.Vector3(0, py0, pz0))
+    );
+    sceneGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(worldCorners), borderMat));
+
+    // ── Horizontal trace (h.t.) on PH (y=0) ──
+    // z_ht = -D / sin(α)  [only valid when sin(α) ≠ 0]
+    if (Math.abs(Math.sin(alpha)) > 0.01) {
+      const z_ht = -D / Math.sin(alpha);
+      const traceHMat = new THREE.LineBasicMaterial({ color: C.H, opacity: 1.0, transparent: true });
+      sceneGroup.add(new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(-SIZE, 0, z_ht),
+          new THREE.Vector3( SIZE, 0, z_ht)
+        ]), traceHMat
+      ));
+      addLabel("h.t.", new THREE.Vector3(SIZE + 0.1, 0, z_ht), C.H);
+    }
+
+    // ── Vertical trace (v.t.) on PV (z=0) ──
+    // y_vt = D / cos(α)  [only valid when cos(α) ≠ 0]
+    if (Math.abs(Math.cos(alpha)) > 0.01) {
+      const y_vt = D / Math.cos(alpha);
+      const traceVMat = new THREE.LineBasicMaterial({ color: C.V, opacity: 1.0, transparent: true });
+      sceneGroup.add(new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(-SIZE, y_vt, 0),
+          new THREE.Vector3( SIZE, y_vt, 0)
+        ]), traceVMat
+      ));
+      addLabel("v.t.", new THREE.Vector3(SIZE + 0.1, y_vt, 0), C.V);
+    }
+
+    addLabel('α', new THREE.Vector3(hw + 0.3, py0 + 0.3, pz0), C.plane);
+
+    // Store for 2D use
+    state._planeAlpha = alpha;
+    state._planeD = D;
+  }
+
+  // ── 3-POINT PLANE (case 3) ──────────────────────────────────────────────────
+  // Plane defined by P1, P2, P3 using THREE.Plane.setFromCoplanarPoints
+  // Equation: A·x + B·y + C·z + D = 0  (normal = (A,B,C), D = -normal·P1)
+  //
+  // h.t. (y=0): A·x + C·z + D = 0  →  line in XZ plane
+  //   at x=-SIZE: z = -(A·(-SIZE)+D)/C   at x=+SIZE: z = -(A·SIZE+D)/C
+  //
+  // v.t. (z=0): A·x + B·y + D = 0  →  line in XY plane
+  //   at x=-SIZE: y = -(A·(-SIZE)+D)/B   at x=+SIZE: y = -(A·SIZE+D)/B
+  if (state.showPlane && currentCase === 3) {
+    const P1 = new THREE.Vector3(state.pp1x, state.pp1y, state.pp1z);
+    const P2 = new THREE.Vector3(state.pp2x, state.pp2y, state.pp2z);
+    const P3 = new THREE.Vector3(state.pp3x, state.pp3y, state.pp3z);
+
+    const tPlane = new THREE.Plane().setFromCoplanarPoints(P1, P2, P3);
+    const N = tPlane.normal; // (A, B, C) normalised
+    const Dc = tPlane.constant; // D in A·x+B·y+C·z+D=0
+
+    // Draw the 3 defining points
+    const ptColors = [0xef9a9a, 0x80cbc4, 0xffe082];
+    const ptLabels = ['P1','P2','P3'];
+    [P1,P2,P3].forEach((pt, i) => {
+      const s = new THREE.Mesh(new THREE.SphereGeometry(0.1,12,12), new THREE.MeshBasicMaterial({color: ptColors[i]}));
+      s.position.copy(pt);
+      sceneGroup.add(s);
+      addLabel(ptLabels[i], pt.clone().add(new THREE.Vector3(0.15,0.15,0)), ptColors[i]);
+    });
+
+    // Draw edges P1-P2, P2-P3, P3-P1 to suggest the plane
+    const edgeMat = new THREE.LineBasicMaterial({ color: C.plane, opacity: 0.5, transparent: true });
+    [[P1,P2],[P2,P3],[P3,P1]].forEach(([a,b]) => {
+      sceneGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([a,b]), edgeMat));
+    });
+
+    // Mesh: use a large PlaneGeometry aligned to the THREE.Plane
+    const planeGeo = new THREE.PlaneGeometry(SIZE*1.8, SIZE*1.8);
+    const planeMat = new THREE.MeshBasicMaterial({ color: C.plane, opacity: 0.13, transparent: true, side: THREE.DoubleSide });
+    const planeMesh = new THREE.Mesh(planeGeo, planeMat);
+    // Align mesh normal (0,0,1) to tPlane.normal
+    const quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,1), N);
+    planeMesh.setRotationFromQuaternion(quat);
+    // Position: project origin onto the plane to get the center point
+    planeMesh.position.copy(N.clone().multiplyScalar(-Dc));
+    sceneGroup.add(planeMesh);
+
+    // ── h.t.: intersection with PH (y=0) → A·x + C·z + D = 0 ──
+    if (Math.abs(N.z) > 0.01) {
+      const zAt = x => -(N.x * x + Dc) / N.z;
+      const htMat = new THREE.LineBasicMaterial({ color: C.H });
+      sceneGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(-SIZE, 0, zAt(-SIZE)),
+        new THREE.Vector3( SIZE, 0, zAt( SIZE))
+      ]), htMat));
+      addLabel("h.t.", new THREE.Vector3(SIZE+0.1, 0, zAt(SIZE)), C.H);
+    }
+
+    // ── v.t.: intersection with PV (z=0) → A·x + B·y + D = 0 ──
+    if (Math.abs(N.y) > 0.01) {
+      const yAt = x => -(N.x * x + Dc) / N.y;
+      const vtMat = new THREE.LineBasicMaterial({ color: C.V });
+      sceneGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(-SIZE, yAt(-SIZE), 0),
+        new THREE.Vector3( SIZE, yAt( SIZE), 0)
+      ]), vtMat));
+      addLabel("v.t.", new THREE.Vector3(SIZE+0.1, yAt(SIZE), 0), C.V);
+    }
+
+    // Store for 2D drawing
+    state._3ptN  = N.clone();
+    state._3ptDc = Dc;
+    state._3ptP1 = P1; state._3ptP2 = P2; state._3ptP3 = P3;
+  }
+
+  // ── LINE (defined by two explicit points A and B) ───────────────────────────
+  if (state.showLine) {
+    const p1 = new THREE.Vector3(state.px,  state.py,  state.pz);
+    const p2 = new THREE.Vector3(state.px2, state.py2, state.pz2);
+
+    const lineMat = new THREE.LineBasicMaterial({ color: C.line });
+    sceneGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([p1, p2]), lineMat));
+    addLabel('r', p2.clone().add(new THREE.Vector3(0.2, 0.1, 0)), C.line);
+
+    // Point labels
+    addLabel('A', p1.clone().add(new THREE.Vector3(0.15, 0.15, 0)), C.point);
+    addLabel('B', p2.clone().add(new THREE.Vector3(0.15, 0.15, 0)), C.line);
+
+    // Endpoint spheres
+    [[p1, C.point], [p2, C.line]].forEach(([pt, col]) => {
+      const s = new THREE.Mesh(new THREE.SphereGeometry(0.08, 12, 12), new THREE.MeshBasicMaterial({ color: col }));
+      s.position.copy(pt);
+      sceneGroup.add(s);
+    });
+
+    // H projection of line (onto y=0)
+    const lineProjHMat = new THREE.LineDashedMaterial({ color: C.H, dashSize: 0.15, gapSize: 0.08, opacity: 0.85, transparent: true });
+    const lphLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(p1.x, 0, p1.z), new THREE.Vector3(p2.x, 0, p2.z)
+    ]), lineProjHMat);
+    lphLine.computeLineDistances(); sceneGroup.add(lphLine);
+
+    // V projection of line (onto z=0)
+    const lineProjVMat = new THREE.LineDashedMaterial({ color: C.V, dashSize: 0.15, gapSize: 0.08, opacity: 0.85, transparent: true });
+    const lpvLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(p1.x, p1.y, 0), new THREE.Vector3(p2.x, p2.y, 0)
+    ]), lineProjVMat);
+    lpvLine.computeLineDistances(); sceneGroup.add(lpvLine);
+
+    // Drop lines from both endpoints
+    const dropMat = new THREE.LineDashedMaterial({ color: 0x444455, dashSize: 0.08, gapSize: 0.06, opacity: 0.4, transparent: true });
+    [p1, p2].forEach(pt => {
+      const d1 = new THREE.Line(new THREE.BufferGeometry().setFromPoints([pt, new THREE.Vector3(pt.x, 0, pt.z)]), dropMat);
+      d1.computeLineDistances(); sceneGroup.add(d1);
+      const d2 = new THREE.Line(new THREE.BufferGeometry().setFromPoints([pt, new THREE.Vector3(pt.x, pt.y, 0)]), dropMat);
+      d2.computeLineDistances(); sceneGroup.add(d2);
+    });
+  }
+
+  // ── POINT ────────────────────────────────────────────────────────────────────
+  if (state.showPoint) {
+    const pt = new THREE.Vector3(state.px, state.py, state.pz);
+
+    // Point sphere
+    const sg = new THREE.SphereGeometry(0.1, 16, 16);
+    const sm = new THREE.MeshBasicMaterial({ color: C.point });
+    const s = new THREE.Mesh(sg, sm);
+    s.position.copy(pt);
+    sceneGroup.add(s);
+    addLabel('A', pt.clone().add(new THREE.Vector3(0.15, 0.15, 0)), C.point);
+
+    // H projection (onto y=0)
+    const hProj = new THREE.Vector3(pt.x, 0, pt.z);
+    const hSph = new THREE.Mesh(new THREE.SphereGeometry(0.07,12,12), new THREE.MeshBasicMaterial({ color: C.H }));
+    hSph.position.copy(hProj);
+    sceneGroup.add(hSph);
+    addLabel("a'", hProj.clone().add(new THREE.Vector3(0.12, 0.05, 0.1)), C.H);
+
+    // V projection (onto z=0)
+    const vProj = new THREE.Vector3(pt.x, pt.y, 0);
+    const vSph = new THREE.Mesh(new THREE.SphereGeometry(0.07,12,12), new THREE.MeshBasicMaterial({ color: C.V }));
+    vSph.position.copy(vProj);
+    sceneGroup.add(vSph);
+    addLabel("a''", vProj.clone().add(new THREE.Vector3(0.12, 0.1, 0)), C.V);
+
+    // Drop lines
+    const dropMat = new THREE.LineDashedMaterial({ color: 0x667788, dashSize: 0.12, gapSize: 0.07, opacity: 0.6, transparent: true });
+    const dh = new THREE.Line(new THREE.BufferGeometry().setFromPoints([pt, hProj]), dropMat);
+    dh.computeLineDistances(); sceneGroup.add(dh);
+    const dv = new THREE.Line(new THREE.BufferGeometry().setFromPoints([pt, vProj]), dropMat);
+    dv.computeLineDistances(); sceneGroup.add(dv);
+
+    // Update info
+    updateInfo(pt, hProj, vProj);
+  }
+}
+
+function addLabel(text, pos, color) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 64; canvas.height = 32;
+  const ctx = canvas.getContext('2d');
+  ctx.font = 'bold 18px monospace';
+  ctx.fillStyle = '#' + color.toString(16).padStart(6,'0');
+  ctx.fillText(text, 4, 22);
+  const tex = new THREE.CanvasTexture(canvas);
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+  const sprite = new THREE.Sprite(mat);
+  sprite.position.copy(pos);
+  sprite.scale.set(0.5, 0.25, 1);
+  sceneGroup.add(sprite);
+}
+
+function updateInfo(pt, hp, vp) {
+  document.getElementById('info-box').innerHTML =
+    `<span>A (point):</span> (${pt.x.toFixed(1)}, ${pt.y.toFixed(1)}, ${pt.z.toFixed(1)})<br>` +
+    `<span>a' (H proj):</span> (${hp.x.toFixed(1)}, 0, ${hp.z.toFixed(1)})<br>` +
+    `<span>a'' (V proj):</span> (${vp.x.toFixed(1)}, ${vp.y.toFixed(1)}, 0)<br>` +
+    `<span>dist to H:</span> y = ${pt.y.toFixed(2)}<br>` +
+    `<span>dist to V:</span> z = ${pt.z.toFixed(2)}`;
+}
+
+// ── 2D Projection Views ───────────────────────────────────────────────────────
+const viewH = document.getElementById('viewH');
+const viewV = document.getElementById('viewV');
+const ctxH = viewH.getContext('2d');
+const ctxV = viewV.getContext('2d');
+
+function resizeViews() {
+  const boxes = document.querySelectorAll('.view-box');
+  boxes.forEach((box, i) => {
+    const c = i === 0 ? viewH : viewV;
+    c.width = box.clientWidth * devicePixelRatio;
+    c.height = box.clientHeight * devicePixelRatio;
+  });
+}
+
+function drawViews() {
+  resizeViews();
+  // H view: looking down (Y axis) → shows X, Z
+  drawProjection(ctxH, viewH, 'H', '#4fc3f7');
+  // V view: looking forward (-Z axis) → shows X, Y
+  drawProjection(ctxV, viewV, 'V', '#f06292');
+}
+
+function drawProjection(ctx, canvas, type, color) {
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#0a0c12';
+  ctx.fillRect(0, 0, W, H);
+
+  const cx = W / 2, cy = H / 2;
+  const scale = Math.min(W, H) / 10;
+
+  // Grid
+  ctx.strokeStyle = '#1a2030';
+  ctx.lineWidth = 1;
+  for (let i = -6; i <= 6; i++) {
+    ctx.beginPath(); ctx.moveTo(cx + i*scale, 0); ctx.lineTo(cx + i*scale, H); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, cy + i*scale); ctx.lineTo(W, cy + i*scale); ctx.stroke();
+  }
+  // Axes
+  ctx.strokeStyle = '#2a3050'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, H); ctx.stroke();
+
+  // Axis labels
+  ctx.fillStyle = '#4a5070'; ctx.font = `${10 * devicePixelRatio}px IBM Plex Mono, monospace`;
+  if (type === 'H') {
+    ctx.fillText('x', W - 16, cy - 5);
+    ctx.fillText('z', cx + 4, H - 8);
+  } else {
+    ctx.fillText('x', W - 16, cy - 5);
+    ctx.fillText('y', cx + 4, 14);
+  }
+
+  function toCanvas(a, b) {
+    // In H view, Z increases downward (PH unfolds with front half going down)
+    const flip = type === 'H' ? 1 : -1;
+    return [cx + a * scale, cy + flip * b * scale];
+  }
+
+  // Draw point projection
+  if (state.showPoint) {
+    let a, b;
+    if (type === 'H') { a = state.px; b = state.pz; }
+    else { a = state.px; b = state.py; }
+
+    // Drop lines
+    ctx.setLineDash([4*devicePixelRatio, 3*devicePixelRatio]);
+    ctx.strokeStyle = '#2a4060'; ctx.lineWidth = 1;
+    const [px2, py2] = toCanvas(a, b);
+    ctx.beginPath(); ctx.moveTo(px2, cy); ctx.lineTo(px2, py2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, py2); ctx.lineTo(px2, py2); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Point
+    ctx.beginPath();
+    ctx.arc(...toCanvas(a, b), 5 * devicePixelRatio, 0, Math.PI*2);
+    ctx.fillStyle = '#a5d6a7'; ctx.fill();
+    ctx.strokeStyle = '#0d0f14'; ctx.lineWidth = 1.5; ctx.stroke();
+
+    // Label
+    ctx.fillStyle = '#a5d6a7';
+    ctx.font = `italic ${11 * devicePixelRatio}px Georgia, serif`;
+    const lbl = type === 'H' ? "a'" : "a''";
+    const [lx, ly] = toCanvas(a, b);
+    ctx.fillText(lbl, lx + 6, ly - 4);
+  }
+
+  // Draw line projection (two explicit points)
+  if (state.showLine) {
+    const pts = [
+      { x: state.px,  y: state.py,  z: state.pz,  col: '#a5d6a7', lbl: 'A' },
+      { x: state.px2, y: state.py2, z: state.pz2, col: '#ffd54f', lbl: 'B' }
+    ];
+    const a1 = pts[0].x, b1 = type==='H' ? pts[0].z : pts[0].y;
+    const a2 = pts[1].x, b2 = type==='H' ? pts[1].z : pts[1].y;
+
+    // Line
+    ctx.strokeStyle = '#ffd54f'; ctx.lineWidth = 2 * devicePixelRatio;
+    ctx.beginPath(); ctx.moveTo(...toCanvas(a1,b1)); ctx.lineTo(...toCanvas(a2,b2)); ctx.stroke();
+
+    // Endpoints with individual colors
+    pts.forEach(p => {
+      const a = p.x, b = type==='H' ? p.z : p.y;
+      ctx.beginPath();
+      ctx.arc(...toCanvas(a, b), 4 * devicePixelRatio, 0, Math.PI*2);
+      ctx.fillStyle = p.col; ctx.fill();
+      ctx.fillStyle = p.col;
+      ctx.font = `italic ${10 * devicePixelRatio}px Georgia, serif`;
+      const suffix = type==='H' ? "'" : "''";
+      const [lx, ly] = toCanvas(a, b);
+      ctx.fillText(p.lbl + suffix, lx + 5, ly - 4);
+    });
+
+    // Projection label
+    ctx.fillStyle = '#ffd54f';
+    ctx.font = `italic ${10 * devicePixelRatio}px Georgia, serif`;
+    const lbl = type === 'H' ? "r'" : "r''";
+    const mx = (toCanvas(a1,b1)[0] + toCanvas(a2,b2)[0]) / 2;
+    const my = (toCanvas(a1,b1)[1] + toCanvas(a2,b2)[1]) / 2;
+    ctx.fillText(lbl, mx + 5, my - 4);
+  }
+
+  // Draw plane traces in 2D views
+  if (state.showPlane && state._planeAlpha !== undefined && currentCase !== 3) {
+    // Cases 0,1,2: parallel traces (angle-based plane)
+    const alpha = state._planeAlpha;
+    const D = state._planeD;
+
+    if (type === 'H' && Math.abs(Math.sin(alpha)) > 0.01) {
+      const z_ht = -D / Math.sin(alpha);
+      const [, y2d] = toCanvas(0, z_ht);
+      ctx.strokeStyle = '#4fc3f7'; ctx.lineWidth = 2 * devicePixelRatio;
+      ctx.beginPath(); ctx.moveTo(0, y2d); ctx.lineTo(W, y2d); ctx.stroke();
+      ctx.fillStyle = '#4fc3f7'; ctx.font = `italic bold ${11 * devicePixelRatio}px Georgia, serif`;
+      ctx.fillText("h.t.", W - 36, y2d - 5);
+    }
+
+    if (type === 'V' && Math.abs(Math.cos(alpha)) > 0.01) {
+      const y_vt = D / Math.cos(alpha);
+      const [, y2d] = toCanvas(0, y_vt);
+      ctx.strokeStyle = '#f06292'; ctx.lineWidth = 2 * devicePixelRatio;
+      ctx.beginPath(); ctx.moveTo(0, y2d); ctx.lineTo(W, y2d); ctx.stroke();
+      ctx.fillStyle = '#f06292'; ctx.font = `italic bold ${11 * devicePixelRatio}px Georgia, serif`;
+      ctx.fillText("v.t.", W - 36, y2d - 5);
+    }
+  }
+
+  // Case 3: oblique traces from 3-point plane
+  if (state.showPlane && currentCase === 3 && state._3ptN) {
+    const N = state._3ptN, Dc = state._3ptDc;
+
+    if (type === 'H' && Math.abs(N.z) > 0.01) {
+      // h.t.: A·x + C·z + D = 0  →  z = -(A·x + D)/C
+      // In H view: horizontal axis = X, vertical axis = Z (down = positive)
+      const zAt = x => -(N.x * x + Dc) / N.z;
+      const x1 = -3.5, x2 = 3.5;
+      ctx.strokeStyle = '#4fc3f7'; ctx.lineWidth = 2 * devicePixelRatio;
+      ctx.beginPath();
+      ctx.moveTo(...toCanvas(x1, zAt(x1)));
+      ctx.lineTo(...toCanvas(x2, zAt(x2)));
+      ctx.stroke();
+      ctx.fillStyle = '#4fc3f7'; ctx.font = `italic bold ${11 * devicePixelRatio}px Georgia, serif`;
+      const [lx,ly] = toCanvas(x2, zAt(x2));
+      ctx.fillText("h.t.", lx - 28, ly - 5);
+    }
+
+    if (type === 'V' && Math.abs(N.y) > 0.01) {
+      // v.t.: A·x + B·y + D = 0  →  y = -(A·x + D)/B
+      // In V view: horizontal axis = X, vertical axis = Y (up = positive)
+      const yAt = x => -(N.x * x + Dc) / N.y;
+      const x1 = -3.5, x2 = 3.5;
+      ctx.strokeStyle = '#f06292'; ctx.lineWidth = 2 * devicePixelRatio;
+      ctx.beginPath();
+      ctx.moveTo(...toCanvas(x1, yAt(x1)));
+      ctx.lineTo(...toCanvas(x2, yAt(x2)));
+      ctx.stroke();
+      ctx.fillStyle = '#f06292'; ctx.font = `italic bold ${11 * devicePixelRatio}px Georgia, serif`;
+      const [lx,ly] = toCanvas(x2, yAt(x2));
+      ctx.fillText("v.t.", lx - 28, ly - 5);
+    }
+
+    // Draw projected points P1 P2 P3
+    const ptColors2d = ['#ef9a9a','#80cbc4','#ffe082'];
+    const ptLabels2d = ['P1','P2','P3'];
+    [state._3ptP1, state._3ptP2, state._3ptP3].forEach((pt, i) => {
+      const a = pt.x, b = type === 'H' ? pt.z : pt.y;
+      ctx.beginPath();
+      ctx.arc(...toCanvas(a,b), 4*devicePixelRatio, 0, Math.PI*2);
+      ctx.fillStyle = ptColors2d[i]; ctx.fill();
+      ctx.fillStyle = ptColors2d[i];
+      ctx.font = `italic ${10*devicePixelRatio}px Georgia, serif`;
+      const suffix = type === 'H' ? "'" : "''";
+      const [lx,ly] = toCanvas(a,b);
+      ctx.fillText(ptLabels2d[i]+suffix, lx+5, ly-4);
+    });
+  }
+
+  // Ground line
+  ctx.strokeStyle = type === 'H' ? '#1e3040' : '#3a1a28';
+  ctx.lineWidth = 2.5 * devicePixelRatio;
+  ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke();
+  // LT label
+  ctx.fillStyle = '#888'; ctx.font = `${9 * devicePixelRatio}px IBM Plex Mono`;
+  ctx.fillText('LT', cx + 3, cy - 3);
+}
+
+// ── Cases definition ─────────────────────────────────────────────────────────
+const CASES = [
+  {
+    id: 0,
+    title: 'Plane parallel to LT',
+    desc: "<strong>α plane ∥ LT</strong> — A plane parallel to the ground line.<br>The h.t. and v.t. are both parallel to LT. Adjust the tilt to see how the traces move together.",
+    defaultState: { pa: 45, showH: true, showV: true, showPoint: false, showLine: false, showPlane: true },
+    controls: () => `
+      <div class="ctrl-row">
+        <span class="ctrl-label"><span class="color-badge" style="background:var(--accent-plane)"></span>Plane tilt α</span>
+        <input type="range" id="pa" min="5" max="85" step="1" value="${state.pa}">
+        <span class="val-display" id="pa-val">${state.pa}°</span>
+      </div>
+      <div class="separator"></div>
+      <div class="toggle-row">
+        <button class="toggle-btn h ${state.showH?'active':''}" data-layer="showH">H plane</button>
+        <button class="toggle-btn v ${state.showV?'active':''}" data-layer="showV">V plane</button>
+      </div>`
+  },
+  {
+    id: 1,
+    title: 'Point',
+    desc: "<strong>Point A</strong> — A point in space and its two projections.<br>a&prime; is the plan projection (on PH), a&prime;&prime; is the elevation projection (on PV). Point can be in any quadrant.",
+    defaultState: { px: 1.5, py: 2.0, pz: 1.5, showH: true, showV: true, showPoint: true, showLine: false, showPlane: false },
+    controls: () => `
+      <div class="ctrl-row">
+        <span class="ctrl-label"><span class="color-badge" style="background:var(--accent-point)"></span>X</span>
+        <input type="range" id="px" min="-3" max="3" step="0.1" value="${state.px}">
+        <span class="val-display" id="px-val">${state.px.toFixed(1)}</span>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label"><span class="color-badge" style="background:var(--accent-point)"></span>Y (dist PV)</span>
+        <input type="range" id="py" min="-3" max="4" step="0.1" value="${state.py}">
+        <span class="val-display" id="py-val">${state.py.toFixed(1)}</span>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label"><span class="color-badge" style="background:var(--accent-point)"></span>Z (dist PH)</span>
+        <input type="range" id="pz" min="-3" max="4" step="0.1" value="${state.pz}">
+        <span class="val-display" id="pz-val">${state.pz.toFixed(1)}</span>
+      </div>
+      <div class="separator"></div>
+      <div class="toggle-row">
+        <button class="toggle-btn h ${state.showH?'active':''}" data-layer="showH">H plane</button>
+        <button class="toggle-btn v ${state.showV?'active':''}" data-layer="showV">V plane</button>
+      </div>
+      <div class="info-box" id="info-box" style="margin-top:8px;">—</div>`
+  },
+  {
+    id: 2,
+    title: 'Line through 2 points',
+    desc: "<strong>Line r</strong> defined by two points A and B.<br>r&prime; is its plan projection, r&prime;&prime; its elevation. Move either point to change the line direction and position.",
+    defaultState: { px: 1.0, py: 2.0, pz: 1.0, px2: -1.0, py2: 0.8, pz2: 2.5, showH: true, showV: true, showPoint: false, showLine: true, showPlane: false },
+    controls: () => `
+      <div class="ctrl-row" style="margin-bottom:4px;"><span class="ctrl-label" style="color:var(--accent-point)">Point A</span></div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">X</span>
+        <input type="range" id="px" min="-3" max="3" step="0.1" value="${state.px}">
+        <span class="val-display" id="px-val">${state.px.toFixed(1)}</span>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">Y</span>
+        <input type="range" id="py" min="-3" max="4" step="0.1" value="${state.py}">
+        <span class="val-display" id="py-val">${state.py.toFixed(1)}</span>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">Z</span>
+        <input type="range" id="pz" min="-3" max="4" step="0.1" value="${state.pz}">
+        <span class="val-display" id="pz-val">${state.pz.toFixed(1)}</span>
+      </div>
+      <div class="separator"></div>
+      <div class="ctrl-row" style="margin-bottom:4px;"><span class="ctrl-label" style="color:var(--accent-line)">Point B</span></div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">X</span>
+        <input type="range" id="px2" min="-3" max="3" step="0.1" value="${state.px2}">
+        <span class="val-display" id="px2-val">${state.px2.toFixed(1)}</span>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">Y</span>
+        <input type="range" id="py2" min="-3" max="4" step="0.1" value="${state.py2}">
+        <span class="val-display" id="py2-val">${state.py2.toFixed(1)}</span>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">Z</span>
+        <input type="range" id="pz2" min="-3" max="4" step="0.1" value="${state.pz2}">
+        <span class="val-display" id="pz2-val">${state.pz2.toFixed(1)}</span>
+      </div>
+      <div class="separator"></div>
+      <div class="toggle-row">
+        <button class="toggle-btn h ${state.showH?'active':''}" data-layer="showH">H plane</button>
+        <button class="toggle-btn v ${state.showV?'active':''}" data-layer="showV">V plane</button>
+      </div>`
+  },
+  {
+    id: 3,
+    title: '④ 3-Point Plane',
+    desc: "<strong>Plane through 3 points</strong> P1, P2, P3 — The traces are now oblique lines (not parallel to LT). They always meet on LT.",
+    defaultState: {
+      pp1x: 0.5, pp1y: 2.5, pp1z: 0.3,
+      pp2x: 2.0, pp2y: 0.3, pp2z: 1.0,
+      pp3x:-1.5, pp3y: 1.0, pp3z: 2.5,
+      showH: true, showV: true, showPoint: false, showLine: false, showPlane: true
+    },
+    controls: () => `
+      <div class="ctrl-row" style="margin-bottom:2px;"><span class="ctrl-label" style="color:#ef9a9a">P1</span></div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">X</span>
+        <input type="range" id="pp1x" min="-3" max="3" step="0.1" value="${state.pp1x}">
+        <span class="val-display" id="pp1x-val">${(state.pp1x||0).toFixed(1)}</span>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">Y</span>
+        <input type="range" id="pp1y" min="0.1" max="4" step="0.1" value="${state.pp1y}">
+        <span class="val-display" id="pp1y-val">${(state.pp1y||0).toFixed(1)}</span>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">Z</span>
+        <input type="range" id="pp1z" min="0.1" max="4" step="0.1" value="${state.pp1z}">
+        <span class="val-display" id="pp1z-val">${(state.pp1z||0).toFixed(1)}</span>
+      </div>
+      <div class="separator"></div>
+      <div class="ctrl-row" style="margin-bottom:2px;"><span class="ctrl-label" style="color:#80cbc4">P2</span></div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">X</span>
+        <input type="range" id="pp2x" min="-3" max="3" step="0.1" value="${state.pp2x}">
+        <span class="val-display" id="pp2x-val">${(state.pp2x||0).toFixed(1)}</span>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">Y</span>
+        <input type="range" id="pp2y" min="0.1" max="4" step="0.1" value="${state.pp2y}">
+        <span class="val-display" id="pp2y-val">${(state.pp2y||0).toFixed(1)}</span>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">Z</span>
+        <input type="range" id="pp2z" min="0.1" max="4" step="0.1" value="${state.pp2z}">
+        <span class="val-display" id="pp2z-val">${(state.pp2z||0).toFixed(1)}</span>
+      </div>
+      <div class="separator"></div>
+      <div class="ctrl-row" style="margin-bottom:2px;"><span class="ctrl-label" style="color:#ffe082">P3</span></div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">X</span>
+        <input type="range" id="pp3x" min="-3" max="3" step="0.1" value="${state.pp3x}">
+        <span class="val-display" id="pp3x-val">${(state.pp3x||0).toFixed(1)}</span>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">Y</span>
+        <input type="range" id="pp3y" min="0.1" max="4" step="0.1" value="${state.pp3y}">
+        <span class="val-display" id="pp3y-val">${(state.pp3y||0).toFixed(1)}</span>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">Z</span>
+        <input type="range" id="pp3z" min="0.1" max="4" step="0.1" value="${state.pp3z}">
+        <span class="val-display" id="pp3z-val">${(state.pp3z||0).toFixed(1)}</span>
+      </div>
+      <div class="separator"></div>
+      <div class="toggle-row">
+        <button class="toggle-btn h ${state.showH?'active':''}" data-layer="showH">H plane</button>
+        <button class="toggle-btn v ${state.showV?'active':''}" data-layer="showV">V plane</button>
+      </div>`
+  }
+];
+
+let currentCase = 0;
+
+function loadCase(idx) {
+  currentCase = idx;
+  const c = CASES[idx];
+  // Apply default state
+  Object.assign(state, c.defaultState);
+  // Also ensure px2 etc exist
+  if (!('px2' in state)) { state.px2 = -1.0; state.py2 = 0.8; state.pz2 = 2.5; }
+
+  // Render controls
+  const area = document.getElementById('case-controls');
+  area.innerHTML = `<div class="case-desc">${c.desc}</div>` + c.controls();
+
+  // Wire sliders
+  ['px','py','pz','px2','py2','pz2','la','pa','pp1x','pp1y','pp1z','pp2x','pp2y','pp2z','pp3x','pp3y','pp3z'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const disp = document.getElementById(id + '-val');
+    el.addEventListener('input', () => {
+      state[id] = parseFloat(el.value);
+      if (disp) disp.textContent = (id==='la'||id==='pa') ? el.value+'°' : parseFloat(el.value).toFixed(1);
+      buildScene(); drawViews();
+    });
+  });
+
+  // Wire toggle buttons
+  area.querySelectorAll('.toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const layer = btn.dataset.layer;
+      state[layer] = !state[layer];
+      btn.classList.toggle('active', state[layer]);
+      buildScene(); drawViews();
+    });
+  });
+
+  // Update tab UI
+  document.querySelectorAll('.case-tab').forEach(t => t.classList.toggle('active', parseInt(t.dataset.case) === idx));
+
+  buildScene(); drawViews();
+}
+
+document.querySelectorAll('.case-tab').forEach(btn => {
+  btn.addEventListener('click', () => loadCase(parseInt(btn.dataset.case)));
+});
+
+// ── Resize ────────────────────────────────────────────────────────────────────
+function resize() {
+  const w = canvas3d.parentElement.clientWidth - 280;
+  const h = canvas3d.parentElement.clientHeight;
+  renderer.setSize(w, h);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  drawViews();
+}
+window.addEventListener('resize', resize);
+
+// ── Animate ────────────────────────────────────────────────────────────────────
+function animate() {
+  requestAnimationFrame(animate);
+  renderer.render(scene, camera);
+}
+
+// Init
+setTimeout(() => {
+  resize();
+  loadCase(0);
+}, 50);
+animate();
+</script>
+</body>
+</html>
