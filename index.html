@@ -115,33 +115,7 @@
     flex-shrink: 0;
   }
 
-  .view-canvases {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    flex: 1;
-    gap: 0;
-    min-height: 0;
-  }
-
-  .view-box {
-    position: relative;
-    border-right: 1px solid var(--border);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-  }
-  .view-box:last-child { border-right: none; }
-
-  .view-label {
-    position: absolute;
-    top: 6px; left: 8px;
-    font-size: 9px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    z-index: 2;
-  }
-
-  canvas.view { width: 100% !important; height: 100% !important; display: block; }
+  /* combined view fills the panel */
 
   .controls-panel h3 {
     font-size: 10px;
@@ -341,16 +315,9 @@
   <canvas id="canvas3d"></canvas>
 
   <div class="views-panel">
-    <div class="panel-header">Projected Views</div>
-    <div class="view-canvases">
-      <div class="view-box">
-        <div class="view-label" style="color:var(--accent-h)">Plan (H)</div>
-        <canvas id="viewH" class="view"></canvas>
-      </div>
-      <div class="view-box">
-        <div class="view-label" style="color:var(--accent-v)">Elevation (V)</div>
-        <canvas id="viewV" class="view"></canvas>
-      </div>
+    <div class="panel-header">Projected Views — <span style="color:var(--accent-v)">Elevation above LT</span> · <span style="color:var(--accent-h)">Plan below LT</span></div>
+    <div style="flex:1; position:relative; min-height:0;">
+      <canvas id="viewCombined" style="width:100%;height:100%;display:block;"></canvas>
     </div>
   </div>
 
@@ -796,26 +763,225 @@ function updateInfo(pt, hp, vp) {
 }
 
 // ── 2D Projection Views ───────────────────────────────────────────────────────
-const viewH = document.getElementById('viewH');
-const viewV = document.getElementById('viewV');
-const ctxH = viewH.getContext('2d');
-const ctxV = viewV.getContext('2d');
+const viewCombined = document.getElementById('viewCombined');
+const ctxC = viewCombined.getContext('2d');
 
 function resizeViews() {
-  const boxes = document.querySelectorAll('.view-box');
-  boxes.forEach((box, i) => {
-    const c = i === 0 ? viewH : viewV;
-    c.width = box.clientWidth * devicePixelRatio;
-    c.height = box.clientHeight * devicePixelRatio;
-  });
+  const container = viewCombined.parentElement;
+  viewCombined.width  = container.clientWidth  * devicePixelRatio;
+  viewCombined.height = container.clientHeight * devicePixelRatio;
 }
 
 function drawViews() {
   resizeViews();
-  // H view: looking down (Y axis) → shows X, Z
-  drawProjection(ctxH, viewH, 'H', '#4fc3f7');
-  // V view: looking forward (-Z axis) → shows X, Y
-  drawProjection(ctxV, viewV, 'V', '#f06292');
+  drawCombined();
+}
+
+// Draw both projections on one canvas:
+// LT is a horizontal line at the vertical centre.
+// Elevation (V) occupies the upper half  (Y goes up from LT).
+// Plan (H) occupies the lower half        (Z goes down from LT).
+function drawCombined() {
+  const canvas = viewCombined;
+  const ctx = ctxC;
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#0a0c12';
+  ctx.fillRect(0, 0, W, H);
+
+  const cx = W / 2;          // vertical centre line (X=0)
+  const lt = H / 2;          // LT horizontal position
+  const scale = Math.min(W, H) / 11;
+
+  // Convert world coords to canvas:
+  //   V region (above LT): toV(x, y)  →  Y increases upward from lt
+  //   H region (below LT): toH(x, z)  →  Z increases downward from lt
+  function toV(x, y) { return [cx + x * scale, lt - y * scale]; }
+  function toH(x, z) { return [cx + x * scale, lt + z * scale]; }
+
+  // ── Grid ──────────────────────────────────────────────────────────────────
+  ctx.strokeStyle = '#1a2030'; ctx.lineWidth = 1;
+  for (let i = -6; i <= 6; i++) {
+    // vertical grid lines
+    ctx.beginPath(); ctx.moveTo(cx + i*scale, 0); ctx.lineTo(cx + i*scale, H); ctx.stroke();
+  }
+  for (let i = 0; i * scale < lt; i++) {
+    // V half horizontals
+    ctx.beginPath(); ctx.moveTo(0, lt - i*scale); ctx.lineTo(W, lt - i*scale); ctx.stroke();
+    // H half horizontals
+    ctx.beginPath(); ctx.moveTo(0, lt + i*scale); ctx.lineTo(W, lt + i*scale); ctx.stroke();
+  }
+
+  // ── Axis lines ────────────────────────────────────────────────────────────
+  ctx.strokeStyle = '#2a3050'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, H); ctx.stroke(); // X axis
+
+  // ── Region tints ─────────────────────────────────────────────────────────
+  ctx.fillStyle = 'rgba(79,195,247,0.03)';
+  ctx.fillRect(0, lt, W, H - lt);   // H region
+  ctx.fillStyle = 'rgba(240,98,146,0.03)';
+  ctx.fillRect(0, 0, W, lt);         // V region
+
+  // ── Region labels ─────────────────────────────────────────────────────────
+  ctx.font = `${9 * devicePixelRatio}px IBM Plex Mono, monospace`;
+  ctx.fillStyle = '#f06292'; ctx.globalAlpha = 0.5;
+  ctx.fillText('ELEVATION (V)', 6, 14);
+  ctx.fillStyle = '#4fc3f7';
+  ctx.fillText('PLAN (H)', 6, H - 6);
+  ctx.globalAlpha = 1;
+
+  // Axis labels
+  ctx.fillStyle = '#f06292'; ctx.font = `${10 * devicePixelRatio}px IBM Plex Mono`;
+  ctx.fillText('y', cx + 4, 14);
+  ctx.fillStyle = '#4fc3f7';
+  ctx.fillText('z', cx + 4, H - 8);
+  ctx.fillStyle = '#888';
+  ctx.fillText('x', W - 16, lt - 5);
+
+  // ── LT ground line ────────────────────────────────────────────────────────
+  ctx.strokeStyle = '#aaaaaa'; ctx.lineWidth = 2 * devicePixelRatio;
+  ctx.beginPath(); ctx.moveTo(0, lt); ctx.lineTo(W, lt); ctx.stroke();
+  ctx.fillStyle = '#aaaaaa'; ctx.font = `${9 * devicePixelRatio}px IBM Plex Mono`;
+  ctx.fillText('LT', cx + 4, lt - 4);
+
+  // ── Draw elements ─────────────────────────────────────────────────────────
+
+  function dot(x, y, r, color) {
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2);
+    ctx.fillStyle = color; ctx.fill();
+  }
+  function label(text, x, y, color) {
+    ctx.fillStyle = color;
+    ctx.font = `italic ${11 * devicePixelRatio}px Georgia, serif`;
+    ctx.fillText(text, x + 5, y - 4);
+  }
+  function droplines(cx2, cy2, color) {
+    ctx.setLineDash([3*devicePixelRatio, 3*devicePixelRatio]);
+    ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.globalAlpha = 0.35;
+    ctx.beginPath(); ctx.moveTo(cx2, lt); ctx.lineTo(cx2, cy2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, cy2); ctx.lineTo(cx2, cy2); ctx.stroke();
+    ctx.setLineDash([]); ctx.globalAlpha = 1;
+  }
+
+  // ── POINT ────────────────────────────────────────────────────────────────
+  if (state.showPoint) {
+    const [vx, vy] = toV(state.px, state.py); // elevation a''
+    const [hx, hy] = toH(state.px, state.pz); // plan a'
+    droplines(vx, vy, '#4a8060');
+    droplines(hx, hy, '#4a8060');
+    // vertical link between a'' and a' (same x)
+    ctx.setLineDash([3*devicePixelRatio,3*devicePixelRatio]);
+    ctx.strokeStyle = '#a5d6a7'; ctx.lineWidth = 1; ctx.globalAlpha = 0.3;
+    ctx.beginPath(); ctx.moveTo(vx, vy); ctx.lineTo(hx, hy); ctx.stroke();
+    ctx.setLineDash([]); ctx.globalAlpha = 1;
+
+    dot(vx, vy, 5*devicePixelRatio, '#a5d6a7');
+    dot(hx, hy, 5*devicePixelRatio, '#a5d6a7');
+    label("a''", vx, vy, '#a5d6a7');
+    label("a'",  hx, hy, '#a5d6a7');
+  }
+
+  // ── LINE ─────────────────────────────────────────────────────────────────
+  if (state.showLine) {
+    const pts = [
+      { x: state.px,  y: state.py,  z: state.pz,  col: '#a5d6a7', lbl: 'A' },
+      { x: state.px2, y: state.py2, z: state.pz2, col: '#ffd54f', lbl: 'B' }
+    ];
+    // Elevation r''
+    ctx.strokeStyle = '#ffd54f'; ctx.lineWidth = 2*devicePixelRatio;
+    ctx.beginPath();
+    ctx.moveTo(...toV(pts[0].x, pts[0].y));
+    ctx.lineTo(...toV(pts[1].x, pts[1].y));
+    ctx.stroke();
+    // Plan r'
+    ctx.beginPath();
+    ctx.moveTo(...toH(pts[0].x, pts[0].z));
+    ctx.lineTo(...toH(pts[1].x, pts[1].z));
+    ctx.stroke();
+
+    pts.forEach(p => {
+      const [vx,vy] = toV(p.x, p.y);
+      const [hx,hy] = toH(p.x, p.z);
+      dot(vx, vy, 4*devicePixelRatio, p.col);
+      dot(hx, hy, 4*devicePixelRatio, p.col);
+      label(p.lbl+"''", vx, vy, p.col);
+      label(p.lbl+"'",  hx, hy, p.col);
+      // vertical link
+      ctx.setLineDash([3*devicePixelRatio,3*devicePixelRatio]);
+      ctx.strokeStyle = p.col; ctx.lineWidth=1; ctx.globalAlpha=0.25;
+      ctx.beginPath(); ctx.moveTo(vx,vy); ctx.lineTo(hx,hy); ctx.stroke();
+      ctx.setLineDash([]); ctx.globalAlpha=1;
+    });
+
+    // r' r'' midpoint labels
+    ctx.fillStyle='#ffd54f'; ctx.font=`italic ${10*devicePixelRatio}px Georgia,serif`;
+    const [v1x,v1y]=toV(pts[0].x,pts[0].y), [v2x,v2y]=toV(pts[1].x,pts[1].y);
+    ctx.fillText("r''", (v1x+v2x)/2+4, (v1y+v2y)/2-4);
+    const [h1x,h1y]=toH(pts[0].x,pts[0].z), [h2x,h2y]=toH(pts[1].x,pts[1].z);
+    ctx.fillText("r'",  (h1x+h2x)/2+4, (h1y+h2y)/2-4);
+  }
+
+  // ── PLANE — parallel traces (cases 0,1,2) ────────────────────────────────
+  if (state.showPlane && state._planeAlpha !== undefined && currentCase !== 3) {
+    const alpha = state._planeAlpha, D = state._planeD;
+    if (Math.abs(Math.sin(alpha)) > 0.01) {
+      const z_ht = -D / Math.sin(alpha);
+      const [,hy] = toH(0, z_ht);
+      ctx.strokeStyle = '#4fc3f7'; ctx.lineWidth = 2*devicePixelRatio;
+      ctx.beginPath(); ctx.moveTo(0, hy); ctx.lineTo(W, hy); ctx.stroke();
+      ctx.fillStyle = '#4fc3f7'; ctx.font=`italic bold ${11*devicePixelRatio}px Georgia,serif`;
+      ctx.fillText("h.t.", W-38, hy-5);
+    }
+    if (Math.abs(Math.cos(alpha)) > 0.01) {
+      const y_vt = D / Math.cos(alpha);
+      const [,vy] = toV(0, y_vt);
+      ctx.strokeStyle = '#f06292'; ctx.lineWidth = 2*devicePixelRatio;
+      ctx.beginPath(); ctx.moveTo(0, vy); ctx.lineTo(W, vy); ctx.stroke();
+      ctx.fillStyle = '#f06292'; ctx.font=`italic bold ${11*devicePixelRatio}px Georgia,serif`;
+      ctx.fillText("v.t.", W-38, vy-5);
+    }
+  }
+
+  // ── PLANE — oblique traces (case 3) ──────────────────────────────────────
+  if (state.showPlane && currentCase === 3 && state._3ptN) {
+    const N = state._3ptN, Dc = state._3ptDc;
+    const x1 = -3.5, x2 = 3.5;
+
+    if (Math.abs(N.z) > 0.01) {
+      const zAt = x => -(N.x * x + Dc) / N.z;
+      ctx.strokeStyle = '#4fc3f7'; ctx.lineWidth = 2*devicePixelRatio;
+      ctx.beginPath();
+      ctx.moveTo(...toH(x1, zAt(x1)));
+      ctx.lineTo(...toH(x2, zAt(x2)));
+      ctx.stroke();
+      ctx.fillStyle = '#4fc3f7'; ctx.font=`italic bold ${11*devicePixelRatio}px Georgia,serif`;
+      const [lx,ly] = toH(x2, zAt(x2));
+      ctx.fillText("h.t.", lx-30, ly-5);
+    }
+    if (Math.abs(N.y) > 0.01) {
+      const yAt = x => -(N.x * x + Dc) / N.y;
+      ctx.strokeStyle = '#f06292'; ctx.lineWidth = 2*devicePixelRatio;
+      ctx.beginPath();
+      ctx.moveTo(...toV(x1, yAt(x1)));
+      ctx.lineTo(...toV(x2, yAt(x2)));
+      ctx.stroke();
+      ctx.fillStyle = '#f06292'; ctx.font=`italic bold ${11*devicePixelRatio}px Georgia,serif`;
+      const [lx,ly] = toV(x2, yAt(x2));
+      ctx.fillText("v.t.", lx-30, ly-5);
+    }
+
+    // P1 P2 P3 projections
+    const ptColors2d = ['#ef9a9a','#80cbc4','#ffe082'];
+    const ptLabels2d = ['P1','P2','P3'];
+    [state._3ptP1, state._3ptP2, state._3ptP3].forEach((pt, i) => {
+      const [vx,vy] = toV(pt.x, pt.y);
+      const [hx,hy] = toH(pt.x, pt.z);
+      dot(vx, vy, 4*devicePixelRatio, ptColors2d[i]);
+      dot(hx, hy, 4*devicePixelRatio, ptColors2d[i]);
+      label(ptLabels2d[i]+"''", vx, vy, ptColors2d[i]);
+      label(ptLabels2d[i]+"'",  hx, hy, ptColors2d[i]);
+    });
+  }
 }
 
 function drawProjection(ctx, canvas, type, color) {
