@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sistema Diedrico — Geometría Descriptiva</title>
+<title>Sistema Diédrico — Geometría Descriptiva</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Playfair+Display:ital,wght@0,700;1,400&display=swap');
 
@@ -300,14 +300,14 @@
 <header>
   <div class="title-block">
     <h1>Sistema Diedrico</h1>
-    <p>Geometría Descriptiva — Sistema Proyectivo</p>
+    <p>Geometría Descriptiva — Sistema de Doble Proyección</p>
   </div>
   <div class="legend">
-    <div class="legend-item"><div class="legend-dot" style="background:var(--accent-h)"></div> H plane</div>
-    <div class="legend-item"><div class="legend-dot" style="background:var(--accent-v)"></div> V plane</div>
-    <div class="legend-item"><div class="legend-dot" style="background:var(--accent-line)"></div> Line</div>
-    <div class="legend-item"><div class="legend-dot" style="background:var(--accent-point)"></div> Point</div>
-    <div class="legend-item"><div class="legend-dot" style="background:var(--accent-plane)"></div> Plane</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent-h)"></div> Plano H</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent-v)"></div> Plano V</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent-line)"></div> Recta</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent-point)"></div> Punto</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent-plane)"></div> Plano</div>
   </div>
 </header>
 
@@ -315,7 +315,7 @@
   <canvas id="canvas3d"></canvas>
 
   <div class="views-panel">
-    <div class="panel-header">Projected Views — <span style="color:var(--accent-v)">Elevation above LT</span> · <span style="color:var(--accent-h)">Plan below LT</span></div>
+    <div class="panel-header">Vistas Proyectadas — <span style="color:var(--accent-v)">Alzado encima de LT</span> · <span style="color:var(--accent-h)">Planta debajo de LT</span></div>
     <div style="flex:1; position:relative; min-height:0;">
       <canvas id="viewCombined" style="width:100%;height:100%;display:block;"></canvas>
     </div>
@@ -324,24 +324,24 @@
   <div class="controls-panel" style="padding:0; display:flex; flex-direction:column;">
     <!-- Cases tabs -->
     <div class="cases-bar">
-      <div class="cases-label">Casos</div>
+      <div class="cases-label">Casos de Estudio</div>
       <div class="cases-tabs">
         <button class="case-tab active" data-case="0">① Plano ∥ LT</button>
         <button class="case-tab" data-case="1">② Punto</button>
-        <button class="case-tab" data-case="2">③ Linea</button>
-        <button class="case-tab" data-case="3">④ Plano 3-pt</button>
+        <button class="case-tab" data-case="2">③ Recta</button>
+        <button class="case-tab" data-case="3">④ 3-pt Plano</button>
       </div>
     </div>
     <!-- Dynamic controls area -->
-    <div id="controles" style="padding:14px; overflow-y:auto; flex:1;">
+    <div id="case-controls" style="padding:14px; overflow-y:auto; flex:1;">
     </div>
   </div>
 </div>
 
 <div class="bottom-bar">
-  <div class="hint"><span class="kbd">drag</span> Orbit</div>
-  <div class="hint"><span class="kbd">scroll</span> Zoom</div>
-  <div class="hint"><span class="kbd">right drag</span> Pan</div>
+  <div class="hint"><span class="kbd">arrastrar</span> Orbitar</div>
+  <div class="hint"><span class="kbd">rueda</span> Zoom</div>
+  <div class="hint"><span class="kbd">arrastrar derecho</span> Desplazar</div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -352,7 +352,7 @@ const state = {
   px2: -1.0, py2: 0.8, pz2: 2.5,
   la: 35, pa: 45,
   showH: true, showV: true,
-  showPoint: false, showLine: false, showPlane: true
+  showPunto: false, showRecta: false, showPlano: true
 };
 
 // Colors
@@ -360,7 +360,7 @@ const C = {
   H: 0x4fc3f7, V: 0xf06292,
   line: 0xffd54f, point: 0xa5d6a7, plane: 0xce93d8,
   projH: 0x4fc3f7, projV: 0xf06292,
-  groundLine: 0x888888, axis: 0x444466
+  groundRecta: 0x888888, axis: 0x444466
 };
 
 // ── THREE.JS Scene ────────────────────────────────────────────────────────────
@@ -373,7 +373,7 @@ const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
 camera.position.set(6, 5, 7);
 camera.lookAt(0, 1.5, 0);
 
-// Orbit controls (manual)
+// Orbitar controls (manual)
 let orbit = { theta: 0.7, phi: 0.9, radius: 11, target: new THREE.Vector3(0, 1.5, 0) };
 let mouse = { down: false, right: false, x: 0, y: 0 };
 
@@ -435,80 +435,80 @@ function buildScene() {
 
   const SIZE = 4;
 
-  // ── H plane (XZ, y=0) ──────────────────────────────────────────────────────
+  // ── Plano H (XZ, y=0) ──────────────────────────────────────────────────────
   if (state.showH) {
-    const hGeo = new THREE.PlaneGeometry(SIZE*2, SIZE*2);
+    const hGeo = new THREE.PlanoGeometry(SIZE*2, SIZE*2);
     const hMat = new THREE.MeshBasicMaterial({ color: C.H, opacity: 0.08, transparent: true, side: THREE.DoubleSide });
     const hMesh = new THREE.Mesh(hGeo, hMat);
     hMesh.rotation.x = -Math.PI / 2;
     sceneGroup.add(hMesh);
 
     // H grid
-    const hGridMat = new THREE.LineBasicMaterial({ color: C.H, opacity: 0.18, transparent: true });
+    const hGridMat = new THREE.RectaBasicMaterial({ color: C.H, opacity: 0.18, transparent: true });
     for (let i = -SIZE; i <= SIZE; i++) {
       const pts = [new THREE.Vector3(i, 0, -SIZE), new THREE.Vector3(i, 0, SIZE)];
-      sceneGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), hGridMat));
+      sceneGroup.add(new THREE.Recta(new THREE.BufferGeometry().setFromPuntos(pts), hGridMat));
       const pts2 = [new THREE.Vector3(-SIZE, 0, i), new THREE.Vector3(SIZE, 0, i)];
-      sceneGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts2), hGridMat));
+      sceneGroup.add(new THREE.Recta(new THREE.BufferGeometry().setFromPuntos(pts2), hGridMat));
     }
     // H border
-    const hBorderMat = new THREE.LineBasicMaterial({ color: C.H, opacity: 0.6, transparent: true });
+    const hBorderMat = new THREE.RectaBasicMaterial({ color: C.H, opacity: 0.6, transparent: true });
     const hBorderPts = [
       new THREE.Vector3(-SIZE,0,-SIZE), new THREE.Vector3(SIZE,0,-SIZE),
       new THREE.Vector3(SIZE,0,SIZE), new THREE.Vector3(-SIZE,0,SIZE),
       new THREE.Vector3(-SIZE,0,-SIZE)
     ];
-    sceneGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(hBorderPts), hBorderMat));
+    sceneGroup.add(new THREE.Recta(new THREE.BufferGeometry().setFromPuntos(hBorderPts), hBorderMat));
     // Label
     addLabel('PH', new THREE.Vector3(SIZE+0.3, 0, 0), C.H);
   }
 
-  // ── V plane (XY, z=0) ──────────────────────────────────────────────────────
+  // ── Plano V (XY, z=0) ──────────────────────────────────────────────────────
   if (state.showV) {
-    const vGeo = new THREE.PlaneGeometry(SIZE*2, SIZE*2);
+    const vGeo = new THREE.PlanoGeometry(SIZE*2, SIZE*2);
     const vMat = new THREE.MeshBasicMaterial({ color: C.V, opacity: 0.08, transparent: true, side: THREE.DoubleSide });
     const vMesh = new THREE.Mesh(vGeo, vMat);
     vMesh.position.z = 0;
     sceneGroup.add(vMesh);
 
-    const vGridMat = new THREE.LineBasicMaterial({ color: C.V, opacity: 0.18, transparent: true });
+    const vGridMat = new THREE.RectaBasicMaterial({ color: C.V, opacity: 0.18, transparent: true });
     for (let i = -SIZE; i <= SIZE; i++) {
       const pts = [new THREE.Vector3(i, -SIZE, 0), new THREE.Vector3(i, SIZE, 0)];
-      sceneGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), vGridMat));
+      sceneGroup.add(new THREE.Recta(new THREE.BufferGeometry().setFromPuntos(pts), vGridMat));
       const pts2 = [new THREE.Vector3(-SIZE, i, 0), new THREE.Vector3(SIZE, i, 0)];
-      sceneGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts2), vGridMat));
+      sceneGroup.add(new THREE.Recta(new THREE.BufferGeometry().setFromPuntos(pts2), vGridMat));
     }
-    const vBorderMat = new THREE.LineBasicMaterial({ color: C.V, opacity: 0.6, transparent: true });
+    const vBorderMat = new THREE.RectaBasicMaterial({ color: C.V, opacity: 0.6, transparent: true });
     const vBorderPts = [
       new THREE.Vector3(-SIZE,-SIZE,0), new THREE.Vector3(SIZE,-SIZE,0),
       new THREE.Vector3(SIZE,SIZE,0), new THREE.Vector3(-SIZE,SIZE,0),
       new THREE.Vector3(-SIZE,-SIZE,0)
     ];
-    sceneGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(vBorderPts), vBorderMat));
+    sceneGroup.add(new THREE.Recta(new THREE.BufferGeometry().setFromPuntos(vBorderPts), vBorderMat));
     addLabel('PV', new THREE.Vector3(SIZE+0.3, SIZE-0.3, 0), C.V);
   }
 
   // Ground line (x axis at intersection)
-  const glMat = new THREE.LineBasicMaterial({ color: 0xaaaaaa, opacity: 0.7, transparent: true });
-  sceneGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+  const glMat = new THREE.RectaBasicMaterial({ color: 0xaaaaaa, opacity: 0.7, transparent: true });
+  sceneGroup.add(new THREE.Recta(new THREE.BufferGeometry().setFromPuntos([
     new THREE.Vector3(-SIZE, 0, 0), new THREE.Vector3(SIZE, 0, 0)
   ]), glMat));
   addLabel('LT', new THREE.Vector3(SIZE+0.3, 0.1, 0), 0xaaaaaa);
 
   // Axes
-  const axisMat = new THREE.LineBasicMaterial({ color: 0x555577, opacity: 0.5, transparent: true });
+  const axisMat = new THREE.RectaBasicMaterial({ color: 0x555577, opacity: 0.5, transparent: true });
   const axes = [
     [new THREE.Vector3(-SIZE,0,0), new THREE.Vector3(SIZE,0,0)],
     [new THREE.Vector3(0,0,0), new THREE.Vector3(0,SIZE,0)],
     [new THREE.Vector3(0,0,-SIZE), new THREE.Vector3(0,0,SIZE)],
   ];
-  axes.forEach(([a,b]) => sceneGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([a,b]), axisMat)));
+  axes.forEach(([a,b]) => sceneGroup.add(new THREE.Recta(new THREE.BufferGeometry().setFromPuntos([a,b]), axisMat)));
 
   // ── User-defined oblique PLANE ──────────────────────────────────────────────
   // The plane is defined as tilted by angle α around the X-axis.
   // We fix a pivot point P0 = (0, py0, pz0) that lies on the plane.
-  // Plane normal: n = (0, sin(α), -cos(α))
-  // Plane equation: n·(r - P0) = 0  →  sin(α)·(y - py0) - cos(α)·(z - pz0) = 0
+  // Plano normal: n = (0, sin(α), -cos(α))
+  // Plano equation: n·(r - P0) = 0  →  sin(α)·(y - py0) - cos(α)·(z - pz0) = 0
   //                               →  sin(α)·y - cos(α)·z = sin(α)·py0 - cos(α)·pz0 = D
   //
   // Horizontal trace (h.t.): intersection with PH (y=0)
@@ -518,14 +518,14 @@ function buildScene() {
   //   sin(α)·y = D  →  y_vt = D / sin(α)             (line parallel to X at y=y_vt on z=0)
   //
   // When α=0 the plane is horizontal (parallel to H), traces degenerate.
-  if (state.showPlane && currentCase !== 3) {
+  if (state.showPlano && currentCase !== 3) {
     const alpha = THREE.MathUtils.degToRad(state.pa); // tilt angle
     // Pivot: a nice fixed point the plane passes through
     const py0 = 1.8, pz0 = 1.2;
     const D = Math.cos(alpha) * py0 - Math.sin(alpha) * pz0;
 
     // 3D plane mesh — rotate a flat XY quad by alpha around X axis, offset to pivot
-    const planeGeo = new THREE.PlaneGeometry(SIZE * 1.8, SIZE * 1.8);
+    const planeGeo = new THREE.PlanoGeometry(SIZE * 1.8, SIZE * 1.8);
     const planeMat = new THREE.MeshBasicMaterial({ color: C.plane, opacity: 0.18, transparent: true, side: THREE.DoubleSide });
     const planeMesh = new THREE.Mesh(planeGeo, planeMat);
     // A plane with normal (0, sin(α), -cos(α)) → rotate around X by (π/2 - α)
@@ -534,8 +534,8 @@ function buildScene() {
     planeMesh.position.set(0, py0, pz0);
     sceneGroup.add(planeMesh);
 
-    // Plane border (same transform as mesh)
-    const borderMat = new THREE.LineBasicMaterial({ color: C.plane, opacity: 0.85, transparent: true });
+    // Plano border (same transform as mesh)
+    const borderMat = new THREE.RectaBasicMaterial({ color: C.plane, opacity: 0.85, transparent: true });
     const hw = SIZE * 0.9;
     const localCorners = [
       new THREE.Vector3(-hw, -hw, 0), new THREE.Vector3(hw, -hw, 0),
@@ -546,15 +546,15 @@ function buildScene() {
     const worldCorners = localCorners.map(v =>
       v.clone().applyQuaternion(rotQ).add(new THREE.Vector3(0, py0, pz0))
     );
-    sceneGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(worldCorners), borderMat));
+    sceneGroup.add(new THREE.Recta(new THREE.BufferGeometry().setFromPuntos(worldCorners), borderMat));
 
     // ── Horizontal trace (h.t.) on PH (y=0) ──
     // z_ht = -D / sin(α)  [only valid when sin(α) ≠ 0]
     if (Math.abs(Math.sin(alpha)) > 0.01) {
       const z_ht = -D / Math.sin(alpha);
-      const traceHMat = new THREE.LineBasicMaterial({ color: C.H, opacity: 1.0, transparent: true });
-      sceneGroup.add(new THREE.Line(
-        new THREE.BufferGeometry().setFromPoints([
+      const traceHMat = new THREE.RectaBasicMaterial({ color: C.H, opacity: 1.0, transparent: true });
+      sceneGroup.add(new THREE.Recta(
+        new THREE.BufferGeometry().setFromPuntos([
           new THREE.Vector3(-SIZE, 0, z_ht),
           new THREE.Vector3( SIZE, 0, z_ht)
         ]), traceHMat
@@ -566,9 +566,9 @@ function buildScene() {
     // y_vt = D / cos(α)  [only valid when cos(α) ≠ 0]
     if (Math.abs(Math.cos(alpha)) > 0.01) {
       const y_vt = D / Math.cos(alpha);
-      const traceVMat = new THREE.LineBasicMaterial({ color: C.V, opacity: 1.0, transparent: true });
-      sceneGroup.add(new THREE.Line(
-        new THREE.BufferGeometry().setFromPoints([
+      const traceVMat = new THREE.RectaBasicMaterial({ color: C.V, opacity: 1.0, transparent: true });
+      sceneGroup.add(new THREE.Recta(
+        new THREE.BufferGeometry().setFromPuntos([
           new THREE.Vector3(-SIZE, y_vt, 0),
           new THREE.Vector3( SIZE, y_vt, 0)
         ]), traceVMat
@@ -584,7 +584,7 @@ function buildScene() {
   }
 
   // ── 3-POINT PLANE (case 3) ──────────────────────────────────────────────────
-  // Plane defined by P1, P2, P3 using THREE.Plane.setFromCoplanarPoints
+  // Plano defined by P1, P2, P3 using THREE.Plano.setFromCoplanarPuntos
   // Equation: A·x + B·y + C·z + D = 0  (normal = (A,B,C), D = -normal·P1)
   //
   // h.t. (y=0): A·x + C·z + D = 0  →  line in XZ plane
@@ -592,14 +592,14 @@ function buildScene() {
   //
   // v.t. (z=0): A·x + B·y + D = 0  →  line in XY plane
   //   at x=-SIZE: y = -(A·(-SIZE)+D)/B   at x=+SIZE: y = -(A·SIZE+D)/B
-  if (state.showPlane && currentCase === 3) {
+  if (state.showPlano && currentCase === 3) {
     const P1 = new THREE.Vector3(state.pp1x, state.pp1y, state.pp1z);
     const P2 = new THREE.Vector3(state.pp2x, state.pp2y, state.pp2z);
     const P3 = new THREE.Vector3(state.pp3x, state.pp3y, state.pp3z);
 
-    const tPlane = new THREE.Plane().setFromCoplanarPoints(P1, P2, P3);
-    const N = tPlane.normal; // (A, B, C) normalised
-    const Dc = tPlane.constant; // D in A·x+B·y+C·z+D=0
+    const tPlano = new THREE.Plano().setFromCoplanarPuntos(P1, P2, P3);
+    const N = tPlano.normal; // (A, B, C) normalised
+    const Dc = tPlano.constant; // D in A·x+B·y+C·z+D=0
 
     // Draw the 3 defining points
     const ptColors = [0xef9a9a, 0x80cbc4, 0xffe082];
@@ -612,16 +612,16 @@ function buildScene() {
     });
 
     // Draw edges P1-P2, P2-P3, P3-P1 to suggest the plane
-    const edgeMat = new THREE.LineBasicMaterial({ color: C.plane, opacity: 0.5, transparent: true });
+    const edgeMat = new THREE.RectaBasicMaterial({ color: C.plane, opacity: 0.5, transparent: true });
     [[P1,P2],[P2,P3],[P3,P1]].forEach(([a,b]) => {
-      sceneGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([a,b]), edgeMat));
+      sceneGroup.add(new THREE.Recta(new THREE.BufferGeometry().setFromPuntos([a,b]), edgeMat));
     });
 
-    // Mesh: use a large PlaneGeometry aligned to the THREE.Plane
-    const planeGeo = new THREE.PlaneGeometry(SIZE*1.8, SIZE*1.8);
+    // Mesh: use a large PlanoGeometry aligned to the THREE.Plano
+    const planeGeo = new THREE.PlanoGeometry(SIZE*1.8, SIZE*1.8);
     const planeMat = new THREE.MeshBasicMaterial({ color: C.plane, opacity: 0.13, transparent: true, side: THREE.DoubleSide });
     const planeMesh = new THREE.Mesh(planeGeo, planeMat);
-    // Align mesh normal (0,0,1) to tPlane.normal
+    // Align mesh normal (0,0,1) to tPlano.normal
     const quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,1), N);
     planeMesh.setRotationFromQuaternion(quat);
     // Position: project origin onto the plane to get the center point
@@ -631,8 +631,8 @@ function buildScene() {
     // ── h.t.: intersection with PH (y=0) → A·x + C·z + D = 0 ──
     if (Math.abs(N.z) > 0.01) {
       const zAt = x => -(N.x * x + Dc) / N.z;
-      const htMat = new THREE.LineBasicMaterial({ color: C.H });
-      sceneGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+      const htMat = new THREE.RectaBasicMaterial({ color: C.H });
+      sceneGroup.add(new THREE.Recta(new THREE.BufferGeometry().setFromPuntos([
         new THREE.Vector3(-SIZE, 0, zAt(-SIZE)),
         new THREE.Vector3( SIZE, 0, zAt( SIZE))
       ]), htMat));
@@ -642,8 +642,8 @@ function buildScene() {
     // ── v.t.: intersection with PV (z=0) → A·x + B·y + D = 0 ──
     if (Math.abs(N.y) > 0.01) {
       const yAt = x => -(N.x * x + Dc) / N.y;
-      const vtMat = new THREE.LineBasicMaterial({ color: C.V });
-      sceneGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+      const vtMat = new THREE.RectaBasicMaterial({ color: C.V });
+      sceneGroup.add(new THREE.Recta(new THREE.BufferGeometry().setFromPuntos([
         new THREE.Vector3(-SIZE, yAt(-SIZE), 0),
         new THREE.Vector3( SIZE, yAt( SIZE), 0)
       ]), vtMat));
@@ -657,15 +657,15 @@ function buildScene() {
   }
 
   // ── LINE (defined by two explicit points A and B) ───────────────────────────
-  if (state.showLine) {
+  if (state.showRecta) {
     const p1 = new THREE.Vector3(state.px,  state.py,  state.pz);
     const p2 = new THREE.Vector3(state.px2, state.py2, state.pz2);
 
-    const lineMat = new THREE.LineBasicMaterial({ color: C.line });
-    sceneGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([p1, p2]), lineMat));
+    const lineMat = new THREE.RectaBasicMaterial({ color: C.line });
+    sceneGroup.add(new THREE.Recta(new THREE.BufferGeometry().setFromPuntos([p1, p2]), lineMat));
     addLabel('r', p2.clone().add(new THREE.Vector3(0.2, 0.1, 0)), C.line);
 
-    // Point labels
+    // Punto labels
     addLabel('A', p1.clone().add(new THREE.Vector3(0.15, 0.15, 0)), C.point);
     addLabel('B', p2.clone().add(new THREE.Vector3(0.15, 0.15, 0)), C.line);
 
@@ -677,34 +677,34 @@ function buildScene() {
     });
 
     // H projection of line (onto y=0)
-    const lineProjHMat = new THREE.LineDashedMaterial({ color: C.H, dashSize: 0.15, gapSize: 0.08, opacity: 0.85, transparent: true });
-    const lphLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+    const lineProjHMat = new THREE.RectaDashedMaterial({ color: C.H, dashSize: 0.15, gapSize: 0.08, opacity: 0.85, transparent: true });
+    const lphRecta = new THREE.Recta(new THREE.BufferGeometry().setFromPuntos([
       new THREE.Vector3(p1.x, 0, p1.z), new THREE.Vector3(p2.x, 0, p2.z)
     ]), lineProjHMat);
-    lphLine.computeLineDistances(); sceneGroup.add(lphLine);
+    lphRecta.computeRectaDistances(); sceneGroup.add(lphRecta);
 
     // V projection of line (onto z=0)
-    const lineProjVMat = new THREE.LineDashedMaterial({ color: C.V, dashSize: 0.15, gapSize: 0.08, opacity: 0.85, transparent: true });
-    const lpvLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+    const lineProjVMat = new THREE.RectaDashedMaterial({ color: C.V, dashSize: 0.15, gapSize: 0.08, opacity: 0.85, transparent: true });
+    const lpvRecta = new THREE.Recta(new THREE.BufferGeometry().setFromPuntos([
       new THREE.Vector3(p1.x, p1.y, 0), new THREE.Vector3(p2.x, p2.y, 0)
     ]), lineProjVMat);
-    lpvLine.computeLineDistances(); sceneGroup.add(lpvLine);
+    lpvRecta.computeRectaDistances(); sceneGroup.add(lpvRecta);
 
     // Drop lines from both endpoints
-    const dropMat = new THREE.LineDashedMaterial({ color: 0x444455, dashSize: 0.08, gapSize: 0.06, opacity: 0.4, transparent: true });
+    const dropMat = new THREE.RectaDashedMaterial({ color: 0x444455, dashSize: 0.08, gapSize: 0.06, opacity: 0.4, transparent: true });
     [p1, p2].forEach(pt => {
-      const d1 = new THREE.Line(new THREE.BufferGeometry().setFromPoints([pt, new THREE.Vector3(pt.x, 0, pt.z)]), dropMat);
-      d1.computeLineDistances(); sceneGroup.add(d1);
-      const d2 = new THREE.Line(new THREE.BufferGeometry().setFromPoints([pt, new THREE.Vector3(pt.x, pt.y, 0)]), dropMat);
-      d2.computeLineDistances(); sceneGroup.add(d2);
+      const d1 = new THREE.Recta(new THREE.BufferGeometry().setFromPuntos([pt, new THREE.Vector3(pt.x, 0, pt.z)]), dropMat);
+      d1.computeRectaDistances(); sceneGroup.add(d1);
+      const d2 = new THREE.Recta(new THREE.BufferGeometry().setFromPuntos([pt, new THREE.Vector3(pt.x, pt.y, 0)]), dropMat);
+      d2.computeRectaDistances(); sceneGroup.add(d2);
     });
   }
 
   // ── POINT ────────────────────────────────────────────────────────────────────
-  if (state.showPoint) {
+  if (state.showPunto) {
     const pt = new THREE.Vector3(state.px, state.py, state.pz);
 
-    // Point sphere
+    // Punto sphere
     const sg = new THREE.SphereGeometry(0.1, 16, 16);
     const sm = new THREE.MeshBasicMaterial({ color: C.point });
     const s = new THREE.Mesh(sg, sm);
@@ -727,11 +727,11 @@ function buildScene() {
     addLabel("a''", vProj.clone().add(new THREE.Vector3(0.12, 0.1, 0)), C.V);
 
     // Drop lines
-    const dropMat = new THREE.LineDashedMaterial({ color: 0x667788, dashSize: 0.12, gapSize: 0.07, opacity: 0.6, transparent: true });
-    const dh = new THREE.Line(new THREE.BufferGeometry().setFromPoints([pt, hProj]), dropMat);
-    dh.computeLineDistances(); sceneGroup.add(dh);
-    const dv = new THREE.Line(new THREE.BufferGeometry().setFromPoints([pt, vProj]), dropMat);
-    dv.computeLineDistances(); sceneGroup.add(dv);
+    const dropMat = new THREE.RectaDashedMaterial({ color: 0x667788, dashSize: 0.12, gapSize: 0.07, opacity: 0.6, transparent: true });
+    const dh = new THREE.Recta(new THREE.BufferGeometry().setFromPuntos([pt, hProj]), dropMat);
+    dh.computeRectaDistances(); sceneGroup.add(dh);
+    const dv = new THREE.Recta(new THREE.BufferGeometry().setFromPuntos([pt, vProj]), dropMat);
+    dv.computeRectaDistances(); sceneGroup.add(dv);
 
     // Update info
     updateInfo(pt, hProj, vProj);
@@ -825,9 +825,9 @@ function drawCombined() {
   // ── Region labels ─────────────────────────────────────────────────────────
   ctx.font = `${9 * devicePixelRatio}px IBM Plex Mono, monospace`;
   ctx.fillStyle = '#f06292'; ctx.globalAlpha = 0.5;
-  ctx.fillText('ELEVATION (V)', 6, 14);
+  ctx.fillText('ALZADO (V)', 6, 14);
   ctx.fillStyle = '#4fc3f7';
-  ctx.fillText('PLAN (H)', 6, H - 6);
+  ctx.fillText('PLANTA (H)', 6, H - 6);
   ctx.globalAlpha = 1;
 
   // Axis labels
@@ -856,24 +856,24 @@ function drawCombined() {
     ctx.fillText(text, x + 5, y - 4);
   }
   function droplines(cx2, cy2, color) {
-    ctx.setLineDash([3*devicePixelRatio, 3*devicePixelRatio]);
+    ctx.setRectaDash([3*devicePixelRatio, 3*devicePixelRatio]);
     ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.globalAlpha = 0.35;
     ctx.beginPath(); ctx.moveTo(cx2, lt); ctx.lineTo(cx2, cy2); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(cx, cy2); ctx.lineTo(cx2, cy2); ctx.stroke();
-    ctx.setLineDash([]); ctx.globalAlpha = 1;
+    ctx.setRectaDash([]); ctx.globalAlpha = 1;
   }
 
   // ── POINT ────────────────────────────────────────────────────────────────
-  if (state.showPoint) {
-    const [vx, vy] = toV(state.px, state.py); // elevation a''
+  if (state.showPunto) {
+    const [vx, vy] = toV(state.px, state.py); // alzado a''
     const [hx, hy] = toH(state.px, state.pz); // plan a'
     droplines(vx, vy, '#4a8060');
     droplines(hx, hy, '#4a8060');
     // vertical link between a'' and a' (same x)
-    ctx.setLineDash([3*devicePixelRatio,3*devicePixelRatio]);
+    ctx.setRectaDash([3*devicePixelRatio,3*devicePixelRatio]);
     ctx.strokeStyle = '#a5d6a7'; ctx.lineWidth = 1; ctx.globalAlpha = 0.3;
     ctx.beginPath(); ctx.moveTo(vx, vy); ctx.lineTo(hx, hy); ctx.stroke();
-    ctx.setLineDash([]); ctx.globalAlpha = 1;
+    ctx.setRectaDash([]); ctx.globalAlpha = 1;
 
     dot(vx, vy, 5*devicePixelRatio, '#a5d6a7');
     dot(hx, hy, 5*devicePixelRatio, '#a5d6a7');
@@ -882,7 +882,7 @@ function drawCombined() {
   }
 
   // ── LINE ─────────────────────────────────────────────────────────────────
-  if (state.showLine) {
+  if (state.showRecta) {
     const pts = [
       { x: state.px,  y: state.py,  z: state.pz,  col: '#a5d6a7', lbl: 'A' },
       { x: state.px2, y: state.py2, z: state.pz2, col: '#ffd54f', lbl: 'B' }
@@ -907,10 +907,10 @@ function drawCombined() {
       label(p.lbl+"''", vx, vy, p.col);
       label(p.lbl+"'",  hx, hy, p.col);
       // vertical link
-      ctx.setLineDash([3*devicePixelRatio,3*devicePixelRatio]);
+      ctx.setRectaDash([3*devicePixelRatio,3*devicePixelRatio]);
       ctx.strokeStyle = p.col; ctx.lineWidth=1; ctx.globalAlpha=0.25;
       ctx.beginPath(); ctx.moveTo(vx,vy); ctx.lineTo(hx,hy); ctx.stroke();
-      ctx.setLineDash([]); ctx.globalAlpha=1;
+      ctx.setRectaDash([]); ctx.globalAlpha=1;
     });
 
     // r' r'' midpoint labels
@@ -922,7 +922,7 @@ function drawCombined() {
   }
 
   // ── PLANE — parallel traces (cases 0,1,2) ────────────────────────────────
-  if (state.showPlane && state._planeAlpha !== undefined && currentCase !== 3) {
+  if (state.showPlano && state._planeAlpha !== undefined && currentCase !== 3) {
     const alpha = state._planeAlpha, D = state._planeD;
     if (Math.abs(Math.sin(alpha)) > 0.01) {
       const z_ht = -D / Math.sin(alpha);
@@ -943,7 +943,7 @@ function drawCombined() {
   }
 
   // ── PLANE — oblique traces (case 3) ──────────────────────────────────────
-  if (state.showPlane && currentCase === 3 && state._3ptN) {
+  if (state.showPlano && currentCase === 3 && state._3ptN) {
     const N = state._3ptN, Dc = state._3ptDc;
     const x1 = -3.5, x2 = 3.5;
 
@@ -1022,20 +1022,20 @@ function drawProjection(ctx, canvas, type, color) {
   }
 
   // Draw point projection
-  if (state.showPoint) {
+  if (state.showPunto) {
     let a, b;
     if (type === 'H') { a = state.px; b = state.pz; }
     else { a = state.px; b = state.py; }
 
     // Drop lines
-    ctx.setLineDash([4*devicePixelRatio, 3*devicePixelRatio]);
+    ctx.setRectaDash([4*devicePixelRatio, 3*devicePixelRatio]);
     ctx.strokeStyle = '#2a4060'; ctx.lineWidth = 1;
     const [px2, py2] = toCanvas(a, b);
     ctx.beginPath(); ctx.moveTo(px2, cy); ctx.lineTo(px2, py2); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(cx, py2); ctx.lineTo(px2, py2); ctx.stroke();
-    ctx.setLineDash([]);
+    ctx.setRectaDash([]);
 
-    // Point
+    // Punto
     ctx.beginPath();
     ctx.arc(...toCanvas(a, b), 5 * devicePixelRatio, 0, Math.PI*2);
     ctx.fillStyle = '#a5d6a7'; ctx.fill();
@@ -1050,7 +1050,7 @@ function drawProjection(ctx, canvas, type, color) {
   }
 
   // Draw line projection (two explicit points)
-  if (state.showLine) {
+  if (state.showRecta) {
     const pts = [
       { x: state.px,  y: state.py,  z: state.pz,  col: '#a5d6a7', lbl: 'A' },
       { x: state.px2, y: state.py2, z: state.pz2, col: '#ffd54f', lbl: 'B' }
@@ -1058,7 +1058,7 @@ function drawProjection(ctx, canvas, type, color) {
     const a1 = pts[0].x, b1 = type==='H' ? pts[0].z : pts[0].y;
     const a2 = pts[1].x, b2 = type==='H' ? pts[1].z : pts[1].y;
 
-    // Line
+    // Recta
     ctx.strokeStyle = '#ffd54f'; ctx.lineWidth = 2 * devicePixelRatio;
     ctx.beginPath(); ctx.moveTo(...toCanvas(a1,b1)); ctx.lineTo(...toCanvas(a2,b2)); ctx.stroke();
 
@@ -1085,7 +1085,7 @@ function drawProjection(ctx, canvas, type, color) {
   }
 
   // Draw plane traces in 2D views
-  if (state.showPlane && state._planeAlpha !== undefined && currentCase !== 3) {
+  if (state.showPlano && state._planeAlpha !== undefined && currentCase !== 3) {
     // Cases 0,1,2: parallel traces (angle-based plane)
     const alpha = state._planeAlpha;
     const D = state._planeD;
@@ -1110,7 +1110,7 @@ function drawProjection(ctx, canvas, type, color) {
   }
 
   // Case 3: oblique traces from 3-point plane
-  if (state.showPlane && currentCase === 3 && state._3ptN) {
+  if (state.showPlano && currentCase === 3 && state._3ptN) {
     const N = state._3ptN, Dc = state._3ptDc;
 
     if (type === 'H' && Math.abs(N.z) > 0.01) {
@@ -1172,26 +1172,26 @@ function drawProjection(ctx, canvas, type, color) {
 const CASES = [
   {
     id: 0,
-    title: 'Plane parallel to LT',
-    desc: "<strong>α plane ∥ LT</strong> — A plane parallel to the ground line.<br>The h.t. and v.t. are both parallel to LT. Adjust the tilt to see how the traces move together.",
-    defaultState: { pa: 45, showH: true, showV: true, showPoint: false, showLine: false, showPlane: true },
+    title: 'Plano parallel to LT',
+    desc: "<strong>Plano α ∥ LT</strong> — Un plano paralelo a la línea de tierra.<br>La traza horizontal y la vertical son paralelas a LT. Ajusta la inclinación para ver cómo se mueven.",
+    defaultState: { pa: 45, showH: true, showV: true, showPunto: false, showRecta: false, showPlano: true },
     controls: () => `
       <div class="ctrl-row">
-        <span class="ctrl-label"><span class="color-badge" style="background:var(--accent-plane)"></span>Plane tilt α</span>
+        <span class="ctrl-label"><span class="color-badge" style="background:var(--accent-plane)"></span>Plano tilt α</span>
         <input type="range" id="pa" min="5" max="85" step="1" value="${state.pa}">
         <span class="val-display" id="pa-val">${state.pa}°</span>
       </div>
       <div class="separator"></div>
       <div class="toggle-row">
-        <button class="toggle-btn h ${state.showH?'active':''}" data-layer="showH">H plane</button>
-        <button class="toggle-btn v ${state.showV?'active':''}" data-layer="showV">V plane</button>
+        <button class="toggle-btn h ${state.showH?'active':''}" data-layer="showH">Plano H</button>
+        <button class="toggle-btn v ${state.showV?'active':''}" data-layer="showV">Plano V</button>
       </div>`
   },
   {
     id: 1,
-    title: 'Point',
-    desc: "<strong>Point A</strong> — A point in space and its two projections.<br>a&prime; is the plan projection (on PH), a&prime;&prime; is the elevation projection (on PV). Point can be in any quadrant.",
-    defaultState: { px: 1.5, py: 2.0, pz: 1.5, showH: true, showV: true, showPoint: true, showLine: false, showPlane: false },
+    title: 'Punto',
+    desc: "<strong>Punto A</strong> — A point in space and its two projections.<br>a&prime; is the plan projection (on PH), a&prime;&prime; is the alzado projection (on PV). Punto can be in any quadrant.",
+    defaultState: { px: 1.5, py: 2.0, pz: 1.5, showH: true, showV: true, showPunto: true, showRecta: false, showPlano: false },
     controls: () => `
       <div class="ctrl-row">
         <span class="ctrl-label"><span class="color-badge" style="background:var(--accent-point)"></span>X</span>
@@ -1199,29 +1199,29 @@ const CASES = [
         <span class="val-display" id="px-val">${state.px.toFixed(1)}</span>
       </div>
       <div class="ctrl-row">
-        <span class="ctrl-label"><span class="color-badge" style="background:var(--accent-point)"></span>Y (dist PV)</span>
+        <span class="ctrl-label"><span class="color-badge" style="background:var(--accent-point)"></span>Y (dist. PV)</span>
         <input type="range" id="py" min="-3" max="4" step="0.1" value="${state.py}">
         <span class="val-display" id="py-val">${state.py.toFixed(1)}</span>
       </div>
       <div class="ctrl-row">
-        <span class="ctrl-label"><span class="color-badge" style="background:var(--accent-point)"></span>Z (dist PH)</span>
+        <span class="ctrl-label"><span class="color-badge" style="background:var(--accent-point)"></span>Z (dist. PH)</span>
         <input type="range" id="pz" min="-3" max="4" step="0.1" value="${state.pz}">
         <span class="val-display" id="pz-val">${state.pz.toFixed(1)}</span>
       </div>
       <div class="separator"></div>
       <div class="toggle-row">
-        <button class="toggle-btn h ${state.showH?'active':''}" data-layer="showH">H plane</button>
-        <button class="toggle-btn v ${state.showV?'active':''}" data-layer="showV">V plane</button>
+        <button class="toggle-btn h ${state.showH?'active':''}" data-layer="showH">Plano H</button>
+        <button class="toggle-btn v ${state.showV?'active':''}" data-layer="showV">Plano V</button>
       </div>
       <div class="info-box" id="info-box" style="margin-top:8px;">—</div>`
   },
   {
     id: 2,
-    title: 'Line through 2 points',
-    desc: "<strong>Line r</strong> defined by two points A and B.<br>r&prime; is its plan projection, r&prime;&prime; its elevation. Move either point to change the line direction and position.",
-    defaultState: { px: 1.0, py: 2.0, pz: 1.0, px2: -1.0, py2: 0.8, pz2: 2.5, showH: true, showV: true, showPoint: false, showLine: true, showPlane: false },
+    title: 'Recta through 2 points',
+    desc: "<strong>Recta r</strong> defined by two points A and B.<br>r&prime; is its plan projection, r&prime;&prime; its alzado. Move either point to change the line direction and position.",
+    defaultState: { px: 1.0, py: 2.0, pz: 1.0, px2: -1.0, py2: 0.8, pz2: 2.5, showH: true, showV: true, showPunto: false, showRecta: true, showPlano: false },
     controls: () => `
-      <div class="ctrl-row" style="margin-bottom:4px;"><span class="ctrl-label" style="color:var(--accent-point)">Point A</span></div>
+      <div class="ctrl-row" style="margin-bottom:4px;"><span class="ctrl-label" style="color:var(--accent-point)">Punto A</span></div>
       <div class="ctrl-row">
         <span class="ctrl-label">X</span>
         <input type="range" id="px" min="-3" max="3" step="0.1" value="${state.px}">
@@ -1238,7 +1238,7 @@ const CASES = [
         <span class="val-display" id="pz-val">${state.pz.toFixed(1)}</span>
       </div>
       <div class="separator"></div>
-      <div class="ctrl-row" style="margin-bottom:4px;"><span class="ctrl-label" style="color:var(--accent-line)">Point B</span></div>
+      <div class="ctrl-row" style="margin-bottom:4px;"><span class="ctrl-label" style="color:var(--accent-line)">Punto B</span></div>
       <div class="ctrl-row">
         <span class="ctrl-label">X</span>
         <input type="range" id="px2" min="-3" max="3" step="0.1" value="${state.px2}">
@@ -1256,19 +1256,19 @@ const CASES = [
       </div>
       <div class="separator"></div>
       <div class="toggle-row">
-        <button class="toggle-btn h ${state.showH?'active':''}" data-layer="showH">H plane</button>
-        <button class="toggle-btn v ${state.showV?'active':''}" data-layer="showV">V plane</button>
+        <button class="toggle-btn h ${state.showH?'active':''}" data-layer="showH">Plano H</button>
+        <button class="toggle-btn v ${state.showV?'active':''}" data-layer="showV">Plano V</button>
       </div>`
   },
   {
     id: 3,
-    title: '④ 3-Point Plane',
-    desc: "<strong>Plane through 3 points</strong> P1, P2, P3 — The traces are now oblique lines (not parallel to LT). They always meet on LT.",
+    title: '④ 3-Punto Plano',
+    desc: "<strong>Plano through 3 points</strong> P1, P2, P3 — The traces are now oblique lines (not parallel to LT). They always meet on LT.",
     defaultState: {
       pp1x: 0.5, pp1y: 2.5, pp1z: 0.3,
       pp2x: 2.0, pp2y: 0.3, pp2z: 1.0,
       pp3x:-1.5, pp3y: 1.0, pp3z: 2.5,
-      showH: true, showV: true, showPoint: false, showLine: false, showPlane: true
+      showH: true, showV: true, showPunto: false, showRecta: false, showPlano: true
     },
     controls: () => `
       <div class="ctrl-row" style="margin-bottom:2px;"><span class="ctrl-label" style="color:#ef9a9a">P1</span></div>
@@ -1323,8 +1323,8 @@ const CASES = [
       </div>
       <div class="separator"></div>
       <div class="toggle-row">
-        <button class="toggle-btn h ${state.showH?'active':''}" data-layer="showH">H plane</button>
-        <button class="toggle-btn v ${state.showV?'active':''}" data-layer="showV">V plane</button>
+        <button class="toggle-btn h ${state.showH?'active':''}" data-layer="showH">Plano H</button>
+        <button class="toggle-btn v ${state.showV?'active':''}" data-layer="showV">Plano V</button>
       </div>`
   }
 ];
